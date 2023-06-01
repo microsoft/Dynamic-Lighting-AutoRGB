@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description="Priodweddau sy'n gysylltiedig â lansio a dadfygio ap .NET wedi'i becynnu." DisplayName="Pecyn MSIX" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="Llwybr ffolder cynllun" Description="Llwybr i'r cyfeiriadur lle caiff cynllun y pecyn ei gopïo i ddisg pan gaiff yr ap ei adeiladu." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="Argiau llinell gorchymyn" Description="Argiau llinell gorchymyn i'w trosglwyddo i'r ap.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="Peidio â lansio'r ap" Description="Peidiwch â lansio'r ap, ond dadfygiwch fy nghod pan fydd yn cychwyn.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="Caniatáu dolennu'n ôl rhwydwaith lleol" Description="Caniatáu i'r ap wneud galwadau rhwydwaith i'r ddyfais mae wedi'i osod arni." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="Ailosod yr ap bob tro" Description="Dadosod yna ailosod yr ap. Wedi dileu'r holl wybodaeth am gyflwr yr ap.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="Gosod pecynnau dewisol" Description="Gosod pecynnau dewisol mae'r ap yn eu defnyddio.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="Galluogi dadfygio cod cynhenid" Description="Galluogi dadfygio ar gyfer cod wedi'i reoli a chynhenid gyda'i gilydd, a elwir hefyd yn ddadfygio modd cymysg.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="Defnyddio'r peiriant o bell" Description="Mae'n dangos y dylai'r dadfygiwr atodi i broses ar beiriant o bell.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="Enw'r peiriant o bell" Description="Enw'r peiriant o bell.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="Modd dilysu" Description="Y cynllun dilysu i'w ddefnyddio wrth gysylltu â'r peiriant o bell." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="Math o osod" Description="Sut y dylid gosod yr ap ar y peiriant o bell.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="Copïo ffeiliau i ddyfais" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="Cofrestru'r cynllun o'r rhwydwaith">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="Llwybr cofrestru pecyn" Description="Ar gyfer gosod 'Copïo i Ddyfais', mae hyn yn dynodi'r lleoliad ffisegol ar y ddyfais o bell lle bydd y cynllun yn cael ei gopïo, ac mae'n baramedr dewisol. Ar gyfer 'Cofrestru o Rwydwaith', mae hyn yn dynodi lleoliad rhwydwaith o bell cynllun y pecyn, ac mae'n baramedr gofynnol." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="Cynllun glanhau" Description="Mae’n nodi a fydd y ffeiliau nad ydynt yn rhan o'r cynllun yn cael eu tynnu o'r ddyfais darged wrth eu gosod - Mae hyn yn berthnasol i 'Copïo i Ddyfais' yn unig.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="Galluogi Ail-lwytho Poeth" Description="Cymhwyso'r newidiadau cod i’r rhaglen sy'n rhedeg.">
+        
+        
+    </BoolProperty>
+
+</Rule>

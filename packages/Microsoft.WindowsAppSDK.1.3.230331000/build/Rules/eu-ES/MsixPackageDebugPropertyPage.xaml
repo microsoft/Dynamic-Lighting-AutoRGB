@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description="Paketatutako .NET aplikazio bat abiarazteko eta arazteko aukerekin erlazionatutako propietateak." DisplayName="MSIX Package" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="Diseinu-karpetaren bide-izena" Description="Aplikazioa konpilatu ostean paketearen diseinua kopiatuko den diskoaren direktoriorako bide-izena." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="Komando-lerroaren argumentuak" Description="Aplikazioan gehituko diren komando-lerroaren argumentuak.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="Ez abiarazi aplikazioa" Description="Ez abiarazi aplikazioa, baina araztu kodea abiarazten denean.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="Onartu tokiko sarearen atzera-begizta" Description="Onartu aplikazioak sareko deiak egitea hura instalatuta duen gailura." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="Instalatu berriro aplikazioa beti" Description="Desinstalatu eta instalatu berriro aplikazioa. Aplikazioaren egoerari buruzko informazio guztia ezabatu da.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="Inplementatu aukerako paketeak." Description="Inplementatu aplikazioak erabiltzen dituen aukerako paketeak.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="Gaitu jatorrizko kodea arazteko aukera" Description="Gaitu kudeatutako eta jatorrizko kodearen arazketa-aukera (arazketa misto gisa ere ezagutzen da).">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="Erabili urruneko makina" Description="Araztailea urruneko makinaren prozesu bati erantsita egon behar duela zehazten du.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="Urruneko makinaren izena" Description="Urruneko makinaren izena.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="Autentifikazio modua" Description="Urruneko makinara konektatzean erabiliko den autentifikazio-eskema." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="Inplementazio mota" Description="Aplikazioa inplementatzeko modua urruneko makinan.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="Kopiatu fitxategiak gailuan" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="Erregistratu diseinua saretik">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="Paketeak erregistratzeko bide-izena" Description="“Kopiatu gailuan” inplementazioan, diseinua kopiatzeko erabiliko den urruneko gailuaren kokaleku fisikoa zehazten du aukerako parametro honek. “Erregistratu saretik” inplementazioaren kasuan, paketearen diseinuaren urruneko sare-kokaleku bat zehazten du beharrezko parametro honek." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="Garbiketa-diseinua" Description="Inplementazioa egitean diseinuaren zati ez diren fitxategiak helburuko gailutik ken daitezkeen zehazten du. “Kopiatu gailuan” inplementazioan soilik erabil daiteke aukera hau.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="Gaitu berriro kargatzeko aukera aktiboa" Description="Aplikatu kodearen aldaketak exekutatzen ari den aplikazioan.">
+        
+        
+    </BoolProperty>
+
+</Rule>

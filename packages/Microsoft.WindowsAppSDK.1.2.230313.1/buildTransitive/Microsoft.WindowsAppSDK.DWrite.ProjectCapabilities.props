@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ProjectCapability Id="VersionGeneral" Include="DWriteCore" />
+    <ProjectCapability Id="VersionSpecific" Include="Microsoft.WindowsAppSDK.DWrite.1.2-CI-221004-1" />
+  </ItemGroup>
+</Project>

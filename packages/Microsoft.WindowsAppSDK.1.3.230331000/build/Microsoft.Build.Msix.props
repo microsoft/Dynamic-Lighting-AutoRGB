@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!-- 
+      We define the "Msix" ProjectCapability in the project template in order to allow the
+      Single-project MSIX Packaging Tools extension to be activated for the project even if the
+      WinAppSdk Nuget package has not been restored yet. However, once it has been restored, 
+      it is no longer necessary for the project to handle the definition (as the Nuget package
+      takes care of it) so the below property serves as a killswitch. 
+    -->
+    <DisableMsixProjectCapabilityAddedByProject>true</DisableMsixProjectCapabilityAddedByProject>
+
+    <!-- 
+      We define the "HasPackageAndPublishMenuAddedByProject" property in the project template in 
+      order to allow the Solution Explorer "Package and Publish" context menu entry to be enabled
+      as soon as the project is created, even if the WinAppSdk Nuget package has not been restored
+      yet. However, once it has been restored, it is no longer necessary for the project to handle 
+      the definition (as the Nuget package takes care of it) so the below property serves as a 
+      killswitch. 
+    -->
+    <DisableHasPackageAndPublishMenuAddedByProject>true</DisableHasPackageAndPublishMenuAddedByProject>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MsixPackageSupport Condition="'$(MsixPackageSupport)'=='' and '$(EnablePreviewMsixTooling)'!='true' and '$(EnableMsixTooling)'!='true'">false</MsixPackageSupport>
+    <MsixPackageSupport Condition="'$(MsixPackageSupport)'==''">true</MsixPackageSupport>
+    <_MicrosoftBuildMsixPropsOverriden Condition="'$(MicrosoftBuildMsixLocation)'!=''">true</_MicrosoftBuildMsixPropsOverriden>
+    <_MicrosoftBuildMsixPropsOverriden Condition="'$(_MicrosoftBuildMsixPropsOverriden)'==''">false</_MicrosoftBuildMsixPropsOverriden>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="'$(_MicrosoftBuildMsixPropsOverriden)'=='false'">
+    <MsixCommonProps>$(MSBuildThisFileDirectory)Microsoft.Build.Msix.Common.props</MsixCommonProps>
+    <MsixCppProps>$(MSBuildThisFileDirectory)Microsoft.Build.Msix.Cpp.props</MsixCppProps>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_MicrosoftBuildMsixPropsOverriden)'=='true'">
+    <MsixCommonProps>$(MicrosoftBuildMsixLocation)\Targets\Microsoft.Build.Msix.Common.props</MsixCommonProps>
+    <MsixCppProps>$(MicrosoftBuildMsixLocation)\Targets\Microsoft.Build.Msix.Cpp.props</MsixCppProps>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ShouldImportMsixCommonProps Condition="'$(ShouldImportMsixCommonProps)'==''">$(MsixPackageSupport)</ShouldImportMsixCommonProps>
+    <ShouldImportMsixCppProps Condition="'$(ShouldImportMsixCppTargets)'=='' and '$(_MsixIsNativeProject)'=='true'">$(MsixPackageSupport)</ShouldImportMsixCppProps>
+  </PropertyGroup>
+
+  <Import Condition="Exists('$(MsixCommonProps)') and '$(ShouldImportMsixCommonProps)' == 'true'" Project="$(MsixCommonProps)" />
+  <Import Condition="Exists('$(MsixCppProps)') and '$(ShouldImportMsixCppTargets)' == 'true'" Project="$(MsixCppProps)" />
+</Project>

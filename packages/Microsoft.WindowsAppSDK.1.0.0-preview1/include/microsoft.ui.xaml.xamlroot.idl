@@ -1,0 +1,15 @@
+//  Copyright (c) Microsoft Corporation. All rights reserved.
+
+import "oaidl.idl";
+
+[
+    object,
+    uuid( 4CCD7521-9C08-41AD-A5BD-B263EF64C9E7 ),
+    local,
+    pointer_default(unique)
+]
+interface IXamlRootNative: IUnknown
+{
+    [propget] HRESULT HostWindow([out, retval] HWND* hWnd);
+};
+

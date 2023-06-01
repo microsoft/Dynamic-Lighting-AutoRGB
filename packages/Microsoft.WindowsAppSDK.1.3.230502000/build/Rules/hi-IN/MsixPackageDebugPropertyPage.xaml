@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description="पैकेज किए गए .NET ऐप को लॉन्च करने और डीबग करने से संबंधित गुण." DisplayName="MSIX Package" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="लेआउट फ़ोल्डर पथ" Description="उस डायरेक्टरी का पथ जहाँ ऐप बनाए जाने पर पैकेज लेआउट की डिस्क पर प्रतिलिपि बनाई जाती है." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="आदेश पंक्ति तर्क" Description="ऐप को पास करने के लिए आदेश पंक्ति तर्क.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="ऐप लॉन्च न करें" Description="ऐप लॉन्च न करें, लेकिन इसके प्रारंभ होने पर मेरा कोड डीबग करें.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="स्थानीय नेटवर्क लूपबैक की अनुमति दें" Description="ऐप को उस डिवाइस पर नेटवर्क कॉल करने की अनुमति दें जिस पर इसे स्थापित किया गया है." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="हमेशा ऐप फिर से स्थापित करें" Description="स्थापना रद्द करें और फिर ऐप को पुन: स्थापित करें. ऐप स्थिति के बारे में सभी जानकारी हटा दी गई है.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="वैकल्पिक पैकेज परिनियोजित करें" Description="ऐप द्वारा उपयोग किए जाने वाले वैकल्पिक पैकेज परिनियोजित करें.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="नेटिव कोड डीबगिंग सक्षम करें" Description="प्रबंधित और नेटिव कोड के लिए एक साथ डीबगिंग सक्षम करें, जिसे मिश्रित-मोड डीबगिंग भी कहा जाता है.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="दूरस्थ मशीन का उपयोग करें" Description="इंगित करता है कि डीबगर को किसी दूरस्थ मशीन पर प्रक्रिया से अनुलग्न करना चाहिए.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="दूरस्थ मशीन का नाम" Description="दूरस्थ मशीन का नाम.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="प्रमाणन मोड" Description="दूरस्थ मशीन से कनेक्ट करते समय उपयोग करने के लिए प्रमाणन योजना." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="परिनियोजन प्रकार" Description="ऐप को दूरस्थ मशीन पर परिनियोजित किए जाने का तरीका.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="डिवाइस पर फ़ाइलों की प्रतिलिपि बनाएँ" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="नेटवर्क से लेआउट पंजीकृत करें">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="पैकेज पंजीकरण पथ" Description="'डिवाइस में प्रतिलिपि बनाएँ' परिनियोजन के लिए, यह दूरस्थ डिवाइस पर भौतिक स्थान को दर्शाता है जहाँ लेआउट की प्रतिलिपि बनाई जाएगी और यह एक वैकल्पिक पैरामीटर है. 'नेटवर्क से पंजीकृत करें' के लिए, यह पैकेज लेआउट के दूरस्थ नेटवर्क स्थान को दर्शाता है और एक आवश्यक पैरामीटर है." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="क्लीनअप लेआउट" Description="निर्दिष्ट करता है कि क्या वे फ़ाइलें जो लेआउट का एक भाग नहीं हैं, परिनियोजन के दौरान लक्ष्य डिवाइस से निकाल दी जाएँगी-यह केवल ' डिवाइस पर प्रतिलिपि बनाएँ ' परिनियोजन के लिए लागू है.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="हॉट रीलोड सक्षम करें" Description="चल रहे अनुप्रयोग में कोड परिवर्तन लागू करें.">
+        
+        
+    </BoolProperty>
+
+</Rule>

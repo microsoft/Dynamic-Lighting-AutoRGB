@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description="Eigenschaften, die dem Starten und Debuggen einer gepackten .NET-App zugeordnet sind." DisplayName="MSIX-Paket" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="Pfad zum Layoutordner" Description="Pfad zum Verzeichnis, in das das Paketlayout beim Erstellen der App auf den Datenträger kopiert wird." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="Befehlszeilenargumente" Description="Befehlszeilenargumente, die an die App übergeben werden sollen.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="App nicht starten" Description="App nicht starten, sondern meinen Code beim Start debuggen.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="Lokales Netzwerk-Loopback zulassen" Description="Zulassen, dass die App Netzwerkaufrufe an das Gerät durchführt, auf dem sie installiert ist." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="App immer erneut installieren" Description="Deinstallieren Sie die App, und installieren Sie sie erneut. Alle Informationen zum App-Status werden gelöscht.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="Bereitstellen optionaler Pakete" Description="Stellen Sie optionale Pakete bereit, die von der App verwendet werden können.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="Aktivieren des Debuggens von systemeigenem Code" Description="Aktivieren Sie das Debuggen für verwalteten und systemeigenen Code zusammen, auch als „Debuggen im gemischten Modus“ bezeichnet.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="Remotecomputer verwenden" Description="Gibt an, dass der Debugger an einen Prozess auf einem Remotecomputer angefügt werden soll.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="Name des Remotecomputers" Description="Der Name des Remotecomputers.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="Authentifizierungsmodus" Description="Das Authentifizierungsschema, das beim Herstellen einer Verbindung mit dem Remotecomputer verwendet werden soll." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="Bereitstellungsart" Description="Gibt an, wie die App auf dem Remotecomputer bereitgestellt werden soll.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="Kopieren von Dateien auf das Gerät" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="Registrieren des Layouts über das Netzwerk">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="Pfad zur Paketregistrierung" Description="Für die Bereitstellung &quot;Auf Gerät kopieren&quot; gibt dies den physischen Standort auf dem Remotegerät an, auf das das Layout kopiert wird, und ist ein optionaler Parameter. Für &quot;Über Netzwerk registrieren&quot; wird dies eine Remotenetzwerkadresse des Paketlayouts angegeben und ist ein erforderlicher Parameter." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="Bereinigen des Layouts" Description="Gibt an, ob die Dateien, die nicht Teil des Layouts sind, während der Bereitstellung vom Zielgerät entfernt werden. Dies gilt nur für die Bereitstellung &quot;Auf Gerät kopieren&quot;.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="Hot Reload aktivieren" Description="Wenden Sie Codeänderungen auf die Anwendung an, die ausgeführt wird.">
+        
+        
+    </BoolProperty>
+
+</Rule>

@@ -1,0 +1,25 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--Enable AppLocal mode (disabling Framework Package) in any project that sets WindowsAppSDKSelfContained-->
+    <PropertyGroup Condition="'$(WindowsAppSDKSelfContained)'=='true'">
+        <PackageAppxManifest>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))Package.appxmanifest</PackageAppxManifest>
+        <WindowsAppSDKFrameworkPackage>false</WindowsAppSDKFrameworkPackage>
+
+        <!--Disable redundant unpacking of framework package to work around Xaml tooling issue in VS 16.9-->
+        <WindowsAppSDKCopyXamlToolingLibs>false</WindowsAppSDKCopyXamlToolingLibs>
+
+        <!--Disable framework package references for all projects-->
+        <WindowsAppSDKFrameworkPackageReference>false</WindowsAppSDKFrameworkPackageReference>
+    </PropertyGroup>
+
+    <!--Include fusion manifests if unpackaged self-contained-->
+    <!--TODO: standardize on WindowsPackageType-->
+    <ItemGroup Condition="'$(WindowsAppSDKSelfContained)'=='true' and !Exists('$(PackagedManifest)')">
+        <WindowsAppSDKManifestFiles Include="$([MSBuild]::NormalizeDirectory('$(MicrosoftWindowsAppSDKPackageDir)','manifests'))*.manifest"/>
+        <Manifest Include="@(WindowsAppSDKManifestFiles)" />
+    </ItemGroup>
+
+</Project>

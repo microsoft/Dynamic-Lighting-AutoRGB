@@ -1,0 +1,15 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!--Imports for each component Props-->
+  <!--Dwrite's Props and Targets are not in the native folder this we need to target the folder one level up -->
+  <Import Project="$(MSBuildThisFileDirectory)..\Microsoft.WindowsAppSDK.DWrite.props" Condition="Exists('$(MSBuildThisFileDirectory)..\Microsoft.WindowsAppSDK.DWrite.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.Foundation.props" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.Foundation.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.WinUI.props" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.WinUI.props')" />
+  <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.InteractiveExperiences.props" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.InteractiveExperiences.props')" />
+
+  <Import Project="$(MSBuildThisFileDirectory)..\Microsoft.WindowsAppSDK.Common.props" Condition="Exists('$(MSBuildThisFileDirectory)..\Microsoft.WindowsAppSDK.Common.props')" />
+
+</Project>

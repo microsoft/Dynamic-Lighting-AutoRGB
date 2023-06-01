@@ -1,0 +1,16 @@
+//  Copyright (c) Microsoft Corporation. All rights reserved.
+
+import "oaidl.idl";
+
+[
+    object,
+    uuid( 0aea2f26-facf-4588-8cf4-34555124db32 ),
+    local,
+    pointer_default(unique)
+]
+interface IDesktopWindowXamlSourceNative: IUnknown
+{
+    HRESULT AttachToWindow([in, annotation("_In_")] HWND parentWnd);
+    [propget] HRESULT WindowHandle([out, retval] HWND* hWnd);
+    HRESULT PreTranslateMessage([in, annotation("_In_")] const MSG* message, [out, retval] BOOL* result);
+};

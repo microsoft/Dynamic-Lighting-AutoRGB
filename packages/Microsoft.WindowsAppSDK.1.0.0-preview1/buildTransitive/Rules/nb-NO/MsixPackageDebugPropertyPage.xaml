@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description="Egenskaper knyttet til oppstart og feilsøking av en pakket .NET-app." DisplayName="MSIX-pakke" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="Bane til oppsettsmappe" Description="Bane til katalogen der pakkeoppsettet kopieres til disken når appen bygges." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="Kommandolinjeargumenter" Description="Kommandolinjeargumenter som skal sendes til appen.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="Ikke start app" Description="Ikke start appen, men feilsøk koden min når den starter.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="Tillat lokal nettverkstilbakekobling" Description="Tillat at appen foretar nettverksanrop til enheten den er installert på." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="Installer alltid appen på nytt" Description="Avinstaller og installer deretter appen på nytt. All informasjon om apptilstanden er slettet.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="Distribuer valgfrie pakker" Description="Distribuer valgfrie pakker som brukes av appen.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="Aktiver opprinnelig kodefeilsøking" Description="Aktiver feilsøking for administrert og innebygd kode sammen, også kjent som feilsøking i blandet modus.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="Bruk ekstern maskin" Description="Angir at feilsøkingsprogrammet skal knyttes til en prosess på en ekstern maskin.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="Navn på ekstern maskin" Description="Navnet på den eksterne maskinen.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="Godkjenningsmodus" Description="Godkjenningsskjemaet som skal brukes ved tilkobling til den eksterne maskinen." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="Distribusjonstype" Description="Slik skal appen distribueres til den eksterne maskinen.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="Kopier filer til enheten" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="Registrer oppsett fra nettverket">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="Bane til pakkeregistrering" Description="For distribusjon av Kopier til enhet angir dette den fysiske plasseringen på den eksterne enheten der oppsettet kopieres og er en valgfri parameter. For Registrer fra nettverk angir dette en ekstern nettverksplassering for pakkeoppsettet og er en obligatorisk parameter." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="Oppryddingsoppsett" Description="Angir om filene som ikke er en del av oppsettet, skal fjernes fra målenheten under distribusjon . Dette gjelder bare for distribusjon av Kopier til enhet.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="Aktiver høyfrekvent innlasting på nytt" Description="Bruk kodeendringer på det kjørende programmet.">
+        
+        
+    </BoolProperty>
+
+</Rule>

@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WindowsAppSDK>
+    <!-- Release information -->
+    <Release>
+        <Major>1</Major>
+        <Minor>2</Minor>
+        <Patch>0</Patch>
+        <MajorMinor>
+            <UInt32>65538</UInt32>
+            <HexUInt32>00010002</HexUInt32>
+        </MajorMinor>
+
+        <Channel></Channel>
+
+        <Tag></Tag>
+        <ShortTag></ShortTag>
+
+        <Formatted>
+            <Tag></Tag>
+            <ShortTag></ShortTag>
+        </Formatted>
+    </Release>
+
+    <!-- Runtime information -->
+    <Runtime>
+        <Identity>
+            <Publisher>CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US</Publisher>
+            <PublisherId>8wekyb3d8bbwe</PublisherId>
+        </Identity>
+        <Version>
+            <DotQuadNumber>2000.802.31.0</DotQuadNumber>
+            <UInt16>562953397987115008</UInt16>
+            <HexUInt16>0x07D00322001F0000</HexUInt16>
+            <String>2000.802.31.0</String>
+        </Version>
+        <Packages>
+            <Framework>
+                <PackageFamilyName>Microsoft.WindowsAppRuntime.1.2_8wekyb3d8bbwe</PackageFamilyName>
+            </Framework>
+            <Main>
+                <PackageFamilyName>MicrosoftCorporationII.WinAppRuntime.Main.1.2_8wekyb3d8bbwe</PackageFamilyName>
+            </Main>
+            <Singleton>
+                <PackageFamilyName>MicrosoftCorporationII.WinAppRuntime.Singleton_8wekyb3d8bbwe</PackageFamilyName>
+            </Singleton>
+            <DDLM>
+                <X86>
+                    <PackageFamilyName>Microsoft.WinAppRuntime.DDLM.2000.802.31.0-x8_8wekyb3d8bbwe</PackageFamilyName>
+                </X86>
+                <X64>
+                    <PackageFamilyName>Microsoft.WinAppRuntime.DDLM.2000.802.31.0-x6_8wekyb3d8bbwe</PackageFamilyName>
+                </X64>
+                <Arm64>
+                    <PackageFamilyName>Microsoft.WinAppRuntime.DDLM.2000.802.31.0-a6_8wekyb3d8bbwe</PackageFamilyName>
+                </Arm64>
+            </DDLM>
+        </Packages>
+    </Runtime>
+</WindowsAppSDK>

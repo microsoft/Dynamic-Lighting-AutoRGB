@@ -1,0 +1,20 @@
+namespace AutoRGBPrototype
+{
+    runtimeclass CaptureTakenEventArgs
+    {
+        UInt8 R { get; };
+        UInt8 G { get; };
+        UInt8 B { get; };
+    }
+
+    runtimeclass GraphicsManager
+    {
+        void Initialize();
+        void StartCapture();
+
+        Boolean IsCaptureSupported();
+        Int32 GetNumPixels();
+
+        event Windows.Foundation.TypedEventHandler<GraphicsManager, CaptureTakenEventArgs> CaptureTaken;
+    }
+}

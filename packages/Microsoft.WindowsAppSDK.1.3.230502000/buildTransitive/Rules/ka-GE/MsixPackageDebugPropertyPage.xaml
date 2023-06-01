@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Defines properties that will be used by the .NET Project System to build a custom
+     Launch Profile UI for configuring our launch settings.
+     https://github.com/dotnet/project-system/blob/main/docs/repo/property-pages/how-to-add-a-new-launch-profile-kind.md
+ -->
+<Rule Name="MsixPackageDebugPropertyPage" Description=".NET app-ის პაკეტის გაშვებასა და გამართვასთან დაკავშირებული თვისებები." DisplayName="MSIX პაკეტი" PageTemplate="commandNameBasedDebugger" xmlns:sys="clr-namespace:System;assembly=mscorlib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns="http://schemas.microsoft.com/build/2009/properties">
+    
+    
+
+    <Rule.Metadata>
+        <sys:String x:Key="CommandName">MsixPackage</sys:String>
+
+        <!-- KnownImageIds.ImageCatalogGuid -->
+        <sys:Guid x:Key="ImageMonikerGuid">AE27A6B0-E345-4288-96DF-5EAF394EE369</sys:Guid>
+
+        <!-- KnownImageIds.Package -->
+        <sys:Int32 x:Key="ImageMonikerId">2209</sys:Int32>
+    </Rule.Metadata>
+
+    <Rule.DataSource>
+        <DataSource Persistence="LaunchProfile" HasConfigurationCondition="False" ItemType="LaunchProfile"/>
+    </Rule.DataSource>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="LayoutDir" DisplayName="განლაგების საქაღალდის მდებარეობა" Description="საქაღალდის მდებარეობა, სადაც პაკეტის განლაგება კოპირებულია დისკზე აპის შექმნისას." Subtype="folder">
+        
+        
+    </StringProperty>
+
+    <StringProperty Name="CommandLineArguments" DisplayName="ბრძანების ხაზის არგუმენტები" Description="აპისთვის გადასაცემი ბრძანების ხაზის არგუმენტები.">
+        
+        
+    </StringProperty>
+
+    <BoolProperty Name="DoNotLaunchApp" DisplayName="არ გაუშვათ აპი" Description="არ გაუშვათ აპი, მაგრამ გამართეთ ჩემი კოდი მისი გაშვებისას.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AllowLocalNetworkLoopback" DisplayName="ადგილობრივი ქსელის უკუკავშირის დაშვება" Description="დაუშვით აპის მიერ ქსელის ზარების განხორციელება იმ მოწყობილობაზე, რომელზეც ის არის დაყენებული." Default="true">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="AlwaysReinstallApp" DisplayName="ყოველთვის ხელახლა დააყენეთ აპი" Description="გაუკეთეთ აპს დეინსტალაცია და შემდეგ ხელახლა დააყენეთ იგი. აპის მდგომარეობის შესახებ ინფორმაცია მთლიანად წაიშალა.">
+        
+        
+    </BoolProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="DeployOptionalPackages" DisplayName="არასავალდებული პაკეტების განთავსება" Description="აპის მიერ გამოყენებული არასავალდებული პაკეტების განთავსება.">
+      
+      
+    </BoolProperty>
+
+    <BoolProperty Name="NativeDebugging" DisplayName="მშობლიური კოდის გამართვის ჩართვა" Description="ჩართეთ გამართვა მართული და მშობლიური კოდებისთვის ერთად, ასევე ცნობილი, როგორც შერეული რეჟიმის გამართვა.">
+        
+        
+    </BoolProperty>
+
+    <BoolProperty Name="RemoteDebugEnabled" DisplayName="დისტანციური კომპიუტერის გამოყენება" Description="მიუთითებს, რომ გამმართველი უნდა მიებას დისტანციურ კომპიუტერში მიმდინარე პროცესს.">
+        
+        
+    </BoolProperty>
+
+    <StringProperty Name="RemoteDebugMachine" DisplayName="დისტანციური კომპიუტერის სახელი" Description="დისტანციური კომპიუტერის სახელი.">
+          
+          
+          <StringProperty.Metadata>
+              <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+              </NameValuePair>
+          </StringProperty.Metadata>
+    </StringProperty>
+
+    <DynamicEnumProperty Name="AuthenticationMode" DisplayName="ავტორიზაციის რეჟიმი" Description="ავთენტიფიკაციის სქემა, რომელიც დისტანციურ კომპიუტერთან დაკავშირებისას გამოიყენება." EnumProvider="AuthenticationModeEnumProvider">
+        
+        
+        <DynamicEnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </DynamicEnumProperty.Metadata>
+    </DynamicEnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <EnumProperty Name="RemoteDeploymentType" DisplayName="განთავსების ტიპი" Description="როგორ უნდა მოხდეს აპის განთავსება დისტანციურ კომპიუტერში.">
+        
+        
+        <EnumProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </EnumProperty.Metadata>
+        <EnumValue Name="CopyToDevice" DisplayName="ფაილების კოპირება მოწყობილობაში" IsDefault="true">
+            
+        </EnumValue>
+        <EnumValue Name="RegisterFromNetwork" DisplayName="განლაგების დარეგისტრირება ქსელიდან">
+            
+        </EnumValue>
+    </EnumProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <StringProperty Name="PackageRegistrationPath" DisplayName="პაკეტის რეგისტრაციის მდებარეობა" Description="„მოწყობილობაში კოპირების“ გასაშვებად ეს აღნიშნავს ფიზიკურ მდებარეობას დისტანციურ მოწყობილობაში, სადაც მოხდება განლაგების კოპირება და ის არასავალდებულო პარამეტრია. „ქსელიდან დარეგისტრირებისთვის“ ეს აღნიშნავს პაკეტის განლაგების დისტანციური ქსელის მდებარეობას და ის სავალდებულო პარამეტრია." Subtype="folder">
+        
+        
+        <StringProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+              <NameValuePair.Value>(has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true)</NameValuePair.Value>
+            </NameValuePair>
+        </StringProperty.Metadata>
+    </StringProperty>
+
+    <!-- 'Virtual' launch profile property that is persisted to .user file; needs to be accessible to MSBuild -->
+    <BoolProperty Name="RemoveNonLayoutFiles" DisplayName="გასუფთავების განლაგება" Description="მიუთითებს, მოხდება თუ არა განთავსების დროს იმ ფაილების ამოშლა, რომლებიც არ არიან განლაგების ნაწილი - ეს ვრცელდება მხოლოდ „მოწყობილობაში კოპირების“ ტიპის განთავსებაზე.">
+        
+        
+        <BoolProperty.Metadata>
+            <NameValuePair Name="VisibilityCondition">
+                <NameValuePair.Value>(and (has-evaluated-value "MsixPackage" "RemoteDebugEnabled" true) (has-evaluated-value "MsixPackage" "RemoteDeploymentType" "CopyToDevice"))</NameValuePair.Value>
+            </NameValuePair>
+        </BoolProperty.Metadata>
+    </BoolProperty>
+
+    <BoolProperty Name="HotReloadEnabled" DisplayName="ცხელი ხელახლა ჩატვირთვის ჩართვა" Description="კოდის ცვლილებების გამოყენება გაშვებულ პროგრამაზე.">
+        
+        
+    </BoolProperty>
+
+</Rule>

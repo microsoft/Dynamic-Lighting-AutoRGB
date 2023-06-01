@@ -1,0 +1,1811 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="15.0">
+
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MsixTaskAssemblyLocation Condition=" '$(MSBuildRuntimeType)' == 'Core' And '$(MsixTaskAssemblyLocation)'==''">$(MSBuildThisFileDirectory)..\tools\net5.0\</MsixTaskAssemblyLocation>
+    <MsixTaskAssemblyLocation Condition="'$(MsixTaskAssemblyLocation)'==''">$(MSBuildThisFileDirectory)..\tools\net472\</MsixTaskAssemblyLocation>
+    <MsixTaskAssembly>$(MsixTaskAssemblyLocation)Microsoft.Build.Msix.dll</MsixTaskAssembly>
+    <MsixTaskAssemblyNamespace>Microsoft.Build.Msix</MsixTaskAssemblyNamespace>
+  </PropertyGroup>
+
+  <!-- WindowsTools -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).WindowsTools.WinAppSdkGetSdkFileFullPath" />
+
+  <!-- Recipe -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Recipe.WinAppSdkGenerateAppxPackageRecipe" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Recipe.WinAppSdkExpandPayloadDirectories" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Recipe.WinAppSdkRemovePayloadDuplicates" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Recipe.WinAppSdkGenerateProjectArchitecturesFile" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Recipe.WinAppSdkGetPackageArchitecture" />
+
+  <!-- AppxManifest -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppxManifest.WinAppSdkRemoveDuplicateSDKReferences" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppxManifest.WinAppSdkGenerateAppxManifest" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppxManifest.WinAppSdkGetFrameworkSdkPackages" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppxManifest.WinAppSdkValidateAppxManifestItems" />
+  
+  <!-- AppInstaller -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppInstaller.WinAppSdkCreateAppInstallerPublishMeta" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppInstaller.WinAppSdkGenerateLandingPage" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).AppInstaller.WinAppSdkGenerateAppInstallerFile" />
+  
+  <!-- MakeAppx -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).MakeAppx.WinAppSdkGetAppxBundlePlatforms" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).MakeAppx.WinAppSdkMakeAppxPack" />
+
+  <!-- Symbols -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Symbols.WinAppSdkGenerateAppxSymbolPackage" />
+
+  <!-- Signing -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Crypto.WinAppSdkSignAppxPackage" />
+
+  <PropertyGroup>
+    <!--
+      The below table describes the available options for packaging and what they mean.
+      These are controlled through the WindowsPackageType property.
+
+        |   WindowsPackageType |  App Model Type | Produces .msix | Has Identity |
+        |======================|=================|================|==============|
+        |        None          |     Win32       |       No       |     No       |
+        |        MSIX          |     Win32       |       Yes      |     Yes      |
+        |       Sparse         |     Win32       |       No       |     Yes      |
+
+       If there exists a Package.appxmanifest file, then we'll default into MSIX.
+       If there is no Package.appxmanifest, then the default is None.
+    -->
+    <WindowsPackageType Condition="'$(WindowsPackageType)'=='' and Exists('Package.appxmanifest')">MSIX</WindowsPackageType>
+    <WindowsPackageType Condition="'$(WindowsPackageType)'==''">None</WindowsPackageType>
+
+    <!-- Setting this property to 'true' tells VS to change the text of the Project > Publish menu item
+         to "Package and Publish" as well as enable it -->
+    <HasPackageAndPublishMenu Condition="'$(WindowsPackageType)'=='MSIX'">true</HasPackageAndPublishMenu>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <SDKIdentifier Condition="'$(SDKIdentifier)' == ''">UAP</SDKIdentifier>
+    <SDKVersion Condition="'$(SDKVersion)' == ''">10.0</SDKVersion>
+    <_QualifiersPath>$(IntermediateOutputPath)qualifiers.txt</_QualifiersPath>
+    <_ProjectArchitecturesFilePath>$(IntermediateOutputPath)ProjectArchitectures.txt</_ProjectArchitecturesFilePath>
+    <AppxPackageDirName Condition="'$(AppxPackageDirName)' == ''">AppPackages</AppxPackageDirName>
+    <AppxPackageUploadDirName Condition="'$(AppxPackageUploadDirName)' == ''">Upload</AppxPackageUploadDirName>
+    <AppxPackageDir Condition="'$(AppxPackageDir)' == ''">$(OutDir)$(AppxPackageDirName)\</AppxPackageDir>
+    <AppxPackageDir Condition="!HasTrailingSlash('$(AppxPackageDir)')">$(AppxPackageDir)\</AppxPackageDir>
+    <AppxPackageUploadDir Condition="'$(AppxPackageUploadDir)' == ''">$(OutDir)$(AppxPackageUploadDirName)\$(AppxPackageDirName)\</AppxPackageUploadDir>
+    <AppxPackageUploadDir Condition="!HasTrailingSlash('$(AppxPackageUploadDir)')">$(AppxPackageUploadDir)\</AppxPackageUploadDir>
+    <PlatformSpecificBundleArtifactsListDirName Condition="'$(PlatformSpecificBundleArtifactsListDirName)' == ''">BundleArtifacts</PlatformSpecificBundleArtifactsListDirName>
+    <PlatformSpecificBundleArtifactsListDirWasSpecified Condition="'$(PlatformSpecificBundleArtifactsListDir)' != ''">true</PlatformSpecificBundleArtifactsListDirWasSpecified>
+    <PlatformSpecificBundleArtifactsListDirInProjectDir>$(ProjectDir)$(PlatformSpecificBundleArtifactsListDirName)\</PlatformSpecificBundleArtifactsListDirInProjectDir>
+    <AppxSymbolIntermediateDir Condition="'$(AppxSymbolIntermediateDir)' == ''">$(IntermediateOutputPath)Symbols</AppxSymbolIntermediateDir>
+    <AppxPackagingInfoFile Condition="'$(AppxPackagingInfoFile)' == ''">$(IntermediateOutputPath)_pkginfo.txt</AppxPackagingInfoFile>
+    <AppxDefaultHashAlgorithmId Condition="'$(AppxDefaultHashAlgorithmId)' == ''">sha256</AppxDefaultHashAlgorithmId>
+    <AppxHashAlgorithmId Condition="'$(AppxHashAlgorithmId)' == ''">$(AppxDefaultHashAlgorithmId)</AppxHashAlgorithmId>
+    <TargetPlatformMinVersion Condition="'$(TargetPlatformMinVersion)' == ''">$(TargetPlatformVersion)</TargetPlatformMinVersion>
+    <MakeAppxExeFullPath Condition="'$(MakeAppxExeFullPath)' == ''"></MakeAppxExeFullPath>
+    <AppxPackageFileMap Condition="'$(AppxPackageFileMap)' == '' and '$(WindowsPackageType)'!='Sparse'">$(IntermediateOutputPath)package.map.txt</AppxPackageFileMap>
+    <AppxWinMdCacheDir Condition="'$(AppxWinMdCacheDir)' == ''">$(IntermediateOutputPath).winmd_cache</AppxWinMdCacheDir>
+    <ManagedWinmdInprocImplementation Condition="'$(ManagedWinmdInprocImplementation)' == ''">CLRHost.dll</ManagedWinmdInprocImplementation>
+    <AppxManifestFileName Condition="'$(AppxManifestFileName)' == ''">AppxManifest.xml</AppxManifestFileName>
+    <FinalAppxManifestName Condition="'$(FinalAppxManifestName)' == ''">$(TargetDir)$(AppxPackageArtifactsDir)$(AppxManifestFileName)</FinalAppxManifestName>
+    <AppxPackageRecipe Condition="'$(AppxPackageRecipe)' == ''">$(TargetDir)$(AppxPackageArtifactsDir)$(ProjectName).build.appxrecipe</AppxPackageRecipe>
+    <AppxUploadPackageRecipe Condition="'$(AppxUploadPackageRecipe)' == ''">$(TargetDir)$(AppxUploadPackageArtifactsDir)$(ProjectName).build.appxrecipe</AppxUploadPackageRecipe>
+    <FinalAppxPackageRecipe Condition="'$(FinalAppxPackageRecipe)' == ''">$(TargetDir)$(AppxPackageArtifactsDir)$(ProjectName).appxrecipe</FinalAppxPackageRecipe>
+    <FinalAppxUploadPackageRecipe Condition="'$(FinalAppxUploadPackageRecipe)' == ''">$(TargetDir)$(AppxUploadPackageArtifactsDir)$(ProjectName).appxrecipe</FinalAppxUploadPackageRecipe>
+    <TempCertificateFilePath Condition="$(TempCertificateFilePath) == ''">$(IntermediateOutputPath)StoreKey_Temp.pfx</TempCertificateFilePath>
+    <AppInstallerTemplateFileName Condition="'$(AppInstallerTemplateFileName)' == ''">Package.appinstaller</AppInstallerTemplateFileName>
+    <PublishAppxPackage Condition="'$(PublishAppxPackage)'==''">false</PublishAppxPackage>
+    <GenerateAppxPackageOnBuild Condition="'$(GenerateAppxPackageOnBuild)'==''">false</GenerateAppxPackageOnBuild>
+    <!-- Sparse packages always need to generate the msix package, as that is the only way they can be hooked up -->
+    <_GenerateMsixPackage Condition="'$(GenerateAppxPackageOnBuild)'=='true' or '$(PublishAppxPackage)'=='true' or '$(WindowsPackageType)'=='Sparse'">true</_GenerateMsixPackage>
+    <_GenerateMsixPackage Condition="'$(_GenerateMsixPackage)'==''">false</_GenerateMsixPackage>
+    <AppxPackage Condition="'$(AppxPackage)'=='' and '$(WindowsPackageType)'!='None' and ('$(OutputType)' == 'WinExe' or '$(OutputType)' == 'Exe')">true</AppxPackage>
+    <AppxPackage Condition="'$(AppxPackage)'==''">false</AppxPackage>
+
+    <LayoutDir Condition="'$(LayoutDir)'==''">$(TargetDir)AppX</LayoutDir>
+
+    <GenerateMsixAfterTarget Condition="'$(GenerateMsixAfterTarget)'=='' and '$(PublishAppxPackage)'=='true'">Publish</GenerateMsixAfterTarget>
+    <GenerateMsixAfterTarget Condition="'$(GenerateMsixAfterTarget)'=='' and '$(WindowsPackageType)'=='Sparse'">CopyFilesToOutputDirectory</GenerateMsixAfterTarget>
+    <GenerateMsixAfterTarget Condition="'$(GenerateMsixAfterTarget)'==''">PrepareMsixPackage</GenerateMsixAfterTarget>
+
+    <InstallerFileWritesLogPath Condition="'$(InstallerFileWritesLogPath)' == ''">$(IntermediateOutputPath)_installerinfo.log</InstallerFileWritesLogPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AppxPackage)' == 'true'">
+    <PackageAction>_GenerateAppxPackage</PackageAction>
+  </PropertyGroup>
+
+  <!-- Automatically include Package.appxmanifest if it exists but hasn't been explicitly
+  included by the project, and this isn't an unpackaged app -->
+  <ItemGroup Condition="'$(WindowsPackageType)'!='None' and '@(AppxManifest)'=='' and Exists('Package.appxmanifest')">
+    <AppxManifest Include="Package.appxmanifest">
+      <SubType>Designer</SubType>
+    </AppxManifest>
+  </ItemGroup>
+
+  <Target Name="_ValidateWindowsPackageType" Condition="'$(OutputType)'=='WinExe' or '$(OutputType)'=='Exe'">
+    <PropertyGroup>
+      <_ValidWindowsPackageTypes>None,MSIX,Sparse</_ValidWindowsPackageTypes>
+    </PropertyGroup>
+
+    <Error Condition="!$(_ValidWindowsPackageTypes.Contains('$(WindowsPackageType)'))"
+           Text="'$(WindowsPackageType)' is not valid for the WindowsPackageType property. Value must be one of the following: $(_ValidWindowsPackageTypes)"/>
+
+    <!--
+      Provide an error if the user has specified properties that are not compatible
+        (i.e. setting WindowsPackageType=None, but still setting GenerateAppxPackageOnBuild)
+    -->
+    <Error Condition="'$(WindowsPackageType)' == 'None' and '$(GenerateAppxPackageOnBuild)'=='true'"
+          Text="Improper project configuration: WindowsPackageType is set to None, but GenerateAppxPackageOnBuild is set to true."/>
+    <Error Condition="'$(WindowsPackageType)' == 'None' and '$(PublishAppxPackage)'=='true'"
+          Text="Improper project configuration: WindowsPackageType is set to None, but PublishAppxPackage is set to true."/>
+    <Error Condition="'$(WindowsPackageType)' == 'None' and '$(AppxPackage)'=='true'"
+          Text="Improper project configuration: WindowsPackageType is set to None, but AppxPackage is set to true."/>
+    <Error Condition="'$(WindowsPackageType)' == 'None' and '@(AppxManifest)'!=''"
+          Text="Improper project configuration: WindowsPackageType is set to None, but a AppxManifest is specified."/>
+    <Error Condition="'$(WindowsPackageType)' != 'None' and '@(AppxManifest)'==''"
+          Text="Improper project configuration: no AppxManifest is specified, but WindowsPackageType is not set to $(WindowsPackageType)."/>
+  </Target>
+
+  <PropertyGroup>
+    <PrepareForBuildDependsOn>
+      $(PrepareForBuildDependsOn);
+      _ValidateWindowsPackageType;
+    </PrepareForBuildDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageExtPrefix>msix</PackageExtPrefix>
+    <PackageExtPrefix Condition="'$(TargetPlatformMinVersion)' &lt; '10.0.17200.0'">appx</PackageExtPrefix>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AppxPackageExtension Condition="'$(AppxPackageExtension)' == ''">.$(PackageExtPrefix)</AppxPackageExtension>
+    <AppxPackageEncryptedExtension Condition="'$(AppxPackageEncryptedExtension)' == ''">.e$(PackageExtPrefix)</AppxPackageEncryptedExtension>
+    <AppxSymbolPackageExtension Condition="'$(AppxSymbolPackageExtension)' == ''">.$(PackageExtPrefix)sym</AppxSymbolPackageExtension>
+    <AppxBundleExtension Condition="'$(AppxBundleExtension)' == ''">.$(PackageExtPrefix)bundle</AppxBundleExtension>
+    <AppxBundleEncryptedExtension Condition="'$(AppxBundleEncryptedExtension)' == ''">.e$(PackageExtPrefix)bundle</AppxBundleEncryptedExtension>
+    <AppxStoreContainerExtension Condition="'$(AppxStoreContainerExtension)' == ''">.$(PackageExtPrefix)upload</AppxStoreContainerExtension>
+    <AppxIntermediateExtension Condition="'$(AppxIntermediateExtension)' == ''">.intermediate</AppxIntermediateExtension>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == '' and Exists('$(PackageCertificateKeyFile)')">true</AppxPackageSigningEnabled>
+    <AppxWinMdCacheEnabled Condition="'$(AppxWinMdCacheEnabled)' == ''">true</AppxWinMdCacheEnabled>
+    <AppxHarvestWinmdRegistration Condition="'$(AppxHarvestWinmdRegistration)' == ''">true</AppxHarvestWinmdRegistration>
+    <AppxGeneratePackageRecipeEnabled Condition="'$(AppxGeneratePackageRecipeEnabled)' == ''">true</AppxGeneratePackageRecipeEnabled>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(MSBuildRuntimeType)' != 'Core' And '$(AppxUseResourceIndexerApi)' == '' AND '$(registry:HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion@CurrentVersion)' &lt; '6.3'">
+    <AppxUseResourceIndexerApi>false</AppxUseResourceIndexerApi>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AppxUseResourceIndexerApi)' == ''">
+    <AppxUseResourceIndexerApi>true</AppxUseResourceIndexerApi>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PrepareMsixPackageDependsOn Condition="'$(MakeAppxExeFullPath)'==''">
+      $(PrepareMsixPackageDependsOn);
+      _GetMakeAppxToolPath
+    </PrepareMsixPackageDependsOn>
+
+    <PrepareMsixPackageDependsOn Condition="'$(SignAppxPackageExeFullPath)'==''">
+      $(PrepareMsixPackageDependsOn);
+      _GetSignAppxPackageToolPath
+    </PrepareMsixPackageDependsOn>
+
+    <PrepareMsixPackageDependsOn>
+      $(PrepareMsixPackageDependsOn);
+      _ValidatePresenceOfAppxManifestItems;
+      GetPackagingOutputs;
+      _GetPackageProperties;
+      _ComputeAppxPackagePayload;
+      _GenerateAppxManifest;
+      _GenerateAppxPackageRecipe;
+    </PrepareMsixPackageDependsOn>
+  </PropertyGroup>
+
+  <!-- Hook to get our targets to run -->
+  <PropertyGroup>
+    <GenerateMsixPackageDependsOn Condition="'$(WindowsPackageType)'!='Sparse'">
+      $(GenerateMsixPackageDependsOn);
+      PrepareMsixPackage;
+      _EnsurePdbCmfExeFullPath;
+      _ComputeAppxPackageOutput;
+      _GenerateAppxPackageFile;
+      _GenerateAppxSymbolPackage;
+      _CreateTestLayout;
+
+      <!-- App Installer -->
+      GenerateAppInstallerForPackage;
+
+      _AddWindowsInstallScriptToTestLayout;
+    </GenerateMsixPackageDependsOn>
+
+    <GenerateMsixPackageDependsOn Condition="'$(WindowsPackageType)'=='Sparse' and '$(MakeAppxExeFullPath)'==''">
+      $(GenerateMsixPackageDependsOn);
+      _GetMakeAppxToolPath
+    </GenerateMsixPackageDependsOn>
+
+    <GenerateMsixPackageDependsOn Condition="'$(WindowsPackageType)'=='Sparse' and '$(SignAppxPackageExeFullPath)'==''">
+      $(GenerateMsixPackageDependsOn);
+      _GetSignAppxPackageToolPath
+    </GenerateMsixPackageDependsOn>
+
+    <GenerateMsixPackageDependsOn Condition="'$(WindowsPackageType)'=='Sparse'">
+      $(GenerateMsixPackageDependsOn);
+      GenerateProjectPriFile;
+      _ComputeAppxPackageOutput;
+      _GenerateAppxManifest;
+      _GenerateAppxPackageFile;
+    </GenerateMsixPackageDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_CalculatePrepareMsixPackage" Returns="$(_PrepareMsixPackage)" AfterTargets="_ValidateWindowsPackageType">
+    <PropertyGroup>
+      <!--
+        The prepare step of creating the package prepares the package layout so that the app can be debugged
+        Sparse Packages and unpackaged apps don't need to prepare an msix package. Desktop or Universal packaged
+        apps, or projects that specify AppxPackage to true, do need to do this.
+      -->
+      <_PrepareMsixPackage Condition="'$(_PrepareMsixPackage)' == '' and ('$(WindowsPackageType)' == 'Sparse' or '$(WindowsPackageType)'=='None')">false</_PrepareMsixPackage>
+      <_PrepareMsixPackage Condition="'$(_PrepareMsixPackage)' == '' and '$(AppxPackage)'=='true'">true</_PrepareMsixPackage>
+      <_PrepareMsixPackage Condition="'$(_PrepareMsixPackage)' == '' and ('$(OutputType)'=='WinExe' or '$(OutputType)'=='Exe')">true</_PrepareMsixPackage>
+      <_PrepareMsixPackage Condition="'$(_PrepareMsixPackage)'==''">false</_PrepareMsixPackage>
+    </PropertyGroup>
+  </Target>
+
+  <PropertyGroup>
+    <PrepareForRunDependsOn>
+      PrepareMsixPackage;
+      $(PrepareForRunDependsOn);
+    </PrepareForRunDependsOn>
+  </PropertyGroup>
+
+  <Target Name="PrepareMsixPackage"
+          Condition="'$(_PrepareMsixPackage)' == 'true'"
+          DependsOnTargets="$(PrepareMsixPackageDependsOn)" />
+
+  <Target Name="GenerateMsixPackage"
+          Condition="'$(_GenerateMsixPackage)'=='true' "
+          AfterTargets="$(GenerateMsixAfterTarget)"
+          DependsOnTargets="$(GenerateMsixPackageDependsOn)">
+    <Delete Files="$(InstallerFileWritesLogPath)" ContinueOnError="true" TreatErrorsAsWarnings="true" />
+
+    <WriteLinesToFile Condition="'@(InstallerFileWrites)' != ''"
+                  File="$(InstallerFileWritesLogPath)"
+                  Lines="@(InstallerFileWrites->'%(Fullpath)')"
+                  Encoding="Unicode"
+                          />
+    <ItemGroup>
+      <FileWrites Include="$(InstallerFileWritesLogPath)" />
+    </ItemGroup>
+  </Target>
+
+  <PropertyGroup>
+    <_GenerateAppxPackageDependsOn>
+      $(GenerateMsixPackageDependsOn)
+    </_GenerateAppxPackageDependsOn>
+    <_GenerateAppxPackageDependsOn Condition="'$(GenerateAppxPackageOnBuild)'!='true'">
+      Build;
+      $(_GenerateAppxPackageDependsOn);
+    </_GenerateAppxPackageDependsOn>
+    <_GenerateAppxPackageDependsOn Condition="'$(PublishProfile)'!=''">
+      Publish;
+      $(_GenerateAppxPackageDependsOn);
+    </_GenerateAppxPackageDependsOn>
+  </PropertyGroup>
+  <!-- This target maintained for compat with projects updating from Microsoft.AppxPackage.targets -->
+  <Target Name="_GenerateAppxPackage" DependsOnTargets="$(_GenerateAppxPackageDependsOn)"/>
+
+  <!-- If VCInstallPath properties aren't defined, we can get them from the tools install dir.
+         If we *also* don't have the tools install dir, then we can at least attempt to get it from the
+         VS install root, though that requires that we manually retrieve the version of MSVC. -->
+  <UsingTask TaskName="GetLatestMSVCVersion" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <MSVCDirectoryPath ParameterType="System.String" Required="true" />
+      <LatestMSVCVersion ParameterType="System.String" Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.IO" />
+      <Using Namespace="System.Linq" />
+      <Code Type="Fragment" Language="cs">
+        <![CDATA[
+            // The versions of MSVC are expressed as directory names, which will automatically be sorted in version order
+            // by virtue of the fact that they're sorted alphabetically, so we just want to return the last directory,
+            // which will be the latest version.
+            LatestMSVCVersion = new DirectoryInfo(Directory.EnumerateDirectories(MSVCDirectoryPath).Last()).Name;
+]]>
+      </Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="_EnsurePdbCmfExeFullPath" Condition="'$(MsPdbCmfExeFullpath)' == ''">
+    <GetLatestMSVCVersion MSVCDirectoryPath="$(VsInstallRoot)\VC\Tools\MSVC" Condition="'$(VCToolsInstallDir)' == '' and '$(VsInstallRoot)' != ''">
+      <Output TaskParameter="LatestMSVCVersion" PropertyName="LatestMSVCVersion"/>
+    </GetLatestMSVCVersion>
+
+    <!-- We'll first try to get mspdbcmf.exe from VC++ UWP tools -->
+    <PropertyGroup Condition="'$(VCToolsInstallDir)' == '' and '$(VsInstallRoot)' != ''">
+      <VCToolsInstallDir Condition="'$(VCToolsInstallDir)' == ''">$(VsInstallRoot)\VC\Tools\MSVC\$(LatestMSVCVersion)\</VCToolsInstallDir>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(VCToolsInstallDir)' != ''">
+      <_VCInstallPathHostArchitecture Condition="'$(PROCESSOR_ARCHITECTURE)' == 'x86'">X86</_VCInstallPathHostArchitecture>
+      <_VCInstallPathHostArchitecture Condition="'$(PROCESSOR_ARCHITECTURE)' != 'x86'">X64</_VCInstallPathHostArchitecture>
+      <PdbCmfx86ExeFullPath>$(VCToolsInstallDir)bin\Host$(_VCInstallPathHostArchitecture)\x86\mspdbcmf.exe</PdbCmfx86ExeFullPath>
+      <PdbCmfx64ExeFullPath>$(VCToolsInstallDir)bin\Host$(_VCInstallPathHostArchitecture)\x64\mspdbcmf.exe</PdbCmfx64ExeFullPath>
+    </PropertyGroup>
+
+    <!-- Next we'll try the copy included with the `Microsoft.VisualStudio.Windows.Build` VS component -->
+    <PropertyGroup Condition="'$(PdbCmfx86ExeFullPath)' == '' or '$(PdbCmfx64ExeFullPath)' == ''">
+      <AppxMSBuildToolsPath Condition="'$(AppxMSBuildToolsPath)' == ''">$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\AppxPackage\</AppxMSBuildToolsPath>
+      <PdbCmfx86ExeFullPath Condition=" '$(PdbCmfx86ExeFullPath)' == '' ">$(AppxMSBuildToolsPath)\x86\mspdbcmf.exe</PdbCmfx86ExeFullPath>
+      <PdbCmfx64ExeFullPath Condition=" '$(PdbCmfx64ExeFullPath)' == '' ">$(AppxMSBuildToolsPath)\x64\mspdbcmf.exe</PdbCmfx64ExeFullPath>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <MsPdbCmfExeFullpath Condition="'$(MSBuildExtensionsPath64)' != ''">$(PdbCmfx64ExeFullPath)</MsPdbCmfExeFullpath>
+      <MsPdbCmfExeFullpath Condition="'$(MSBuildExtensionsPath64)' == ''">$(PdbCmfx86ExeFullPath)</MsPdbCmfExeFullpath>
+    </PropertyGroup>
+
+    <Warning Text="Path to `mspdbcmf.exe` could not be found. A symbols package will not be generated. Review https://aka.ms/windowsappsdkdocs and ensure that all prerequisites for Windows App SDK development have been installed." 
+             Condition="!(Exists('$(MsPdbCmfExeFullpath)') and '@(PDBPayload)' != '')" />
+  </Target>
+
+  <Target Name="_ValidatePresenceOfAppxManifestItems" Condition="'@(AppxManifest)@(CustomAppxManifest)'!=''">
+    <ItemGroup>
+      <CustomAppxManifest Include="@(Content)" Condition="'%(Identity)' == '$(AppxManifestFileName)'" />
+    </ItemGroup>
+
+    <WinAppSdkValidateAppxManifestItems AppxManifestItems="@(AppxManifest)" CustomAppxManifestItems="@(CustomAppxManifest)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="IdentityName" PropertyName="AppxManifestIdentityName" />
+      <Output TaskParameter="IdentityVersion" PropertyName="AppxManifestIdentityVersion" />
+    </WinAppSdkValidateAppxManifestItems>
+
+    <ItemGroup>
+      <SourceAppxManifest Include="@(AppxManifest)" Condition="'@(AppxManifest)' != ''" />
+      <SourceAppxManifest Include="@(CustomAppxManifest)" Condition="'@(CustomAppxManifest)' != ''" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_CustomAppxManifestUsed Condition="'@(CustomAppxManifest)' == ''">false</_CustomAppxManifestUsed>
+      <_CustomAppxManifestUsed Condition="'@(CustomAppxManifest)' != ''">true</_CustomAppxManifestUsed>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_GenerateAppxSymbolPackage" Condition="Exists ('$(MsPdbCmfExeFullpath)') And '@(PDBPayload)' != ''" Inputs="$(MSBuildAllProjects);@(PDBPayload);@(FinalAppxManifest)" Outputs="$(AppxSymbolPackageOutput)" DependsOnTargets="_EnsurePdbCmfExeFullPath">
+    <PropertyGroup>
+      <ReconstituteFastlinkPdbs Condition="'$(ReconstituteFastlinkPdbs)' == ''">true</ReconstituteFastlinkPdbs>
+    </PropertyGroup>
+
+    <WinAppSdkGenerateAppxSymbolPackage MsPdbCmfExeFullpath="$(MsPdbCmfExeFullpath)"
+                               InputPdbs="@(PDBPayload)"
+                               ProjectName="$(MSBuildProjectName)"
+                               StripPrivateSymbols="$(StripPrivateSymbols)"
+                               IntermediateSymbolRoot="$(AppxSymbolIntermediateDir)"
+                               ReconstituteFastlinkPdbs="$(ReconstituteFastlinkPdbs)"
+                               AppxSymbolPackageOutput="$(AppxSymbolPackageOutput)"
+                               VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="OutputPdbs" ItemName="OutputPdbFiles" />
+    </WinAppSdkGenerateAppxSymbolPackage>
+
+    <ItemGroup>
+      <FinalAppxSymbolPackageItem Include="$(AppxSymbolPackageOutput)" />
+      <PackagingFileWrites Include="@(FinalAppxSymbolPackageItem)" />
+      <FileWrites Include="@(OutputPdbFiles)" />
+      <PackagingDirectoryWrites Include="$(AppxSymbolIntermediateDir)" />
+    </ItemGroup>
+
+    <Message Text="$(MSBuildProjectName) -> $(AppxSymbolPackageOutput)" />
+  </Target>
+
+  <Target Name="_GetMakeAppxToolPath">
+    <WinAppSdkGetSdkFileFullPath FileName="MakeAppx.exe"
+                        TargetPlatformSdkRootOverride="$(TargetPlatformSdkRootOverride)"
+                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                        VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="ActualFullFilePath" PropertyName="MakeAppxExeFullPath" />
+    </WinAppSdkGetSdkFileFullPath>
+
+    <Message Importance="low" Text="MakeAppxExeFullPath: $(MakeAppxExeFullPath)" />
+  </Target>
+
+  <Target Name="_GetSignAppxPackageToolPath">
+    <WinAppSdkGetSdkFileFullPath FileName="signtool.exe"
+                        TargetPlatformSdkRootOverride="$(TargetPlatformSdkRootOverride)"
+                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                        VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="ActualFullFilePath" PropertyName="SignAppxPackageExeFullPath" />
+    </WinAppSdkGetSdkFileFullPath>
+
+    <Message Importance="low" Text="SignAppxPackageExeFullPath: $(SignAppxPackageExeFullPath)" />
+  </Target>
+
+  <Target Name="_GetAppxPackagingComponentManifestPath">
+      <WinAppSdkGetSdkFileFullPath FileName="Microsoft.Windows.Build.Appx.AppxPackaging.dll.manifest"
+                        TargetPlatformSdkRootOverride="$(TargetPlatformSdkRootOverride)"
+                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                        VsTelemetrySession="$(VsTelemetrySession)">
+        <Output TaskParameter="ActualFullFilePath" PropertyName="AppxPackagingComponentManifestPath" />
+      </WinAppSdkGetSdkFileFullPath>
+  </Target>
+
+  <Target Name="_DeleteAppxOutputFolderIfNecessary" Condition="('$(BuildingInsideVisualStudio)' != 'true' or '$(AppxAutoIncrementPackageRevision)' != 'true') and Exists($(AppxPackageTestDir))">
+    <RemoveDir Directories="$(AppxPackageTestDir)" />
+    <Message Importance="low" Text="Deleting $(AppxPackageTestDir)" />
+  </Target>
+
+  <PropertyGroup>
+    <_GenerateAppxPackageFileDependsOn Condition="'$(MakeAppxExeFullPath)'==''">
+      $(_GenerateAppxPackageFileDependsOn);
+      _GetMakeAppxToolPath
+    </_GenerateAppxPackageFileDependsOn>
+
+    <_GenerateAppxPackageFileDependsOn Condition="'$(SignAppxPackageExeFullPath)'==''">
+      $(_GenerateAppxPackageFileDependsOn);
+      _GetSignAppxPackageToolPath
+    </_GenerateAppxPackageFileDependsOn>
+
+    <_GenerateAppxPackageFileDependsOn>
+      $(_GenerateAppxPackageFileDependsOn);
+      _DeleteAppxOutputFolderIfNecessary
+    </_GenerateAppxPackageFileDependsOn>
+  </PropertyGroup>
+
+  <Target Name="_GenerateAppxPackageFile" Inputs="$(MSBuildAllProjects);@(FinalAppxManifest);@(AppxPackagePayload);$(PackageCertificateKeyFile)" Outputs="$(AppxPackageOutput)" DependsOnTargets="$(_GenerateAppxPackageFileDependsOn)">
+    <ItemGroup Condition="'$(AppxPackageIncludePrivateSymbols)' != 'true'">
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+
+    <WinAppSdkRemovePayloadDuplicates Inputs="@(AppxPackagePayload)" ProjectName="$(ProjectName)" Platform="$(Platform)">
+      <Output TaskParameter="Filtered" ItemName="_DedupedAppxPackagePayload" />
+    </WinAppSdkRemovePayloadDuplicates>
+
+    <ItemGroup>
+      <AppxPackagePayload Remove="@(AppxPackagePayload)"/>
+      <AppxPackagePayload Include="@(_DedupedAppxPackagePayload)"/>
+      <_DedupedAppxPackagePayload Remove="@(_DedupedAppxPackagePayload)"/>
+    </ItemGroup>
+
+    <WriteLinesToFile
+      Condition="'$(WindowsPackageType)'!='Sparse'"
+      File="$(AppxPackageFileMap)"
+      Lines="[Files];@(FinalAppxManifest->'%22%(Identity)%22 %22%(FileName)%(Extension)%22');@(AppxPackagePayload->'%22%(Identity)%22 %22%(TargetPath)%22')"
+      Overwrite="true" />
+
+    <ItemGroup Condition="'$(WindowsPackageType)'!='Sparse'">
+      <FileWrites Include="$(AppxPackageFileMap)" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(WindowsPackageType)'=='Sparse'">
+      <MsixContentDirectory Condition="'$(MsixContentDirectory)'==''">$(TargetDir)</MsixContentDirectory>
+    </PropertyGroup>
+
+    <WinAppSdkMakeAppxPack MakeAppxExeFullPath="$(MakeAppxExeFullPath)"
+                  AppxContentGroupMap="$(AppxContentGroupMapFullPath)"
+                  AppxStreamableMainPackage="$(AppxStreamableMainPackage)"
+                  AppxStreamableResourcePackages="$(AppxStreamableResourcePackages)"
+                  ResourcePack="false"
+                  EncryptAppxPackage="$(AppxPackageEncryptionEnabled)"
+                  HashAlgorithmId="$(AppxHashAlgorithmId)"
+                  ValidateResourcesReferencedByManifest="false"
+                  ContentDirectory="$(MsixContentDirectory)"
+                  FileMap="$(AppxPackageFileMap)"
+                  Output="$(AppxPackageOutput)"
+                  VsTelemetrySession="$(VsTelemetrySession)" />
+
+    <ItemGroup>
+      <FinalAppxPackageItem Include="$(AppxPackageOutput)" />
+      <AllBuiltSideloadPackages Include="$(AppxPackageOutput)"/>
+      <FileWrites Include="@(FinalAppxPackageItem)" />
+      <InstallerFileWrites Include="@(FinalAppxPackageItem)" />
+    </ItemGroup>
+
+    <WriteLinesToFile File="$(AppxPackagingInfoFile)" Overwrite="true" Lines="%(FinalAppxPackageItem.FullPath)" />
+
+    <ItemGroup>
+      <FileWrites Include="$(AppxPackagingInfoFile)" />
+    </ItemGroup>
+
+    <Message Importance="high" Text="$(MSBuildProjectName) -> %(FinalAppxPackageItem.FullPath)" />
+
+    <WinAppSdkSignAppxPackage Condition="'$(AppxPackageSigningEnabled)' == 'true'"
+                     AppxPackageToSign="@(FinalAppxPackageItem)"
+                     CertificateThumbprint="$(PackageCertificateThumbprint)"
+                     CertificateFile="$(PackageCertificateKeyFile)"
+                     HashAlgorithmId="$(AppxHashAlgorithmId)"
+                     EnableSigningChecks="$(EnableSigningChecks)"
+                     SignAppxPackageExeFullPath="$(SignAppxPackageExeFullPath)"
+                     TempCertificateFilePath="$(TempCertificateFilePath)"
+                     ExportCertificate="true"
+                     VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="ResolvedThumbprint" PropertyName="ResolvedThumbPrint"/>
+      <Output TaskParameter="AppxPackagePublicKeyFile" PropertyName="AppxPackagePublicKeyFile" />
+    </WinAppSdkSignAppxPackage>
+
+    <Message Condition="'$(AppxPackageSigningEnabled)' == 'true'" Text="$(MSBuildProjectName) -> $(AppxPackagePublicKeyFile)" />
+    <Message Condition="'$(AppxPackageSigningEnabled)' == 'true'" Text="$(MSBuildProjectName) -> $(ResolvedThumbprint)" />
+
+    <ItemGroup>
+      <InstallerFileWrites Include="$(AppxPackagePublicKeyFile)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_AddWindowsInstallScriptToTestLayout">
+    <PropertyGroup>
+      <_PowershellScriptLocation Condition="'$(_PowershellScriptLocation)'==''">$(MSBuildThisFileDirectory)AppDevPackageScripts\</_PowershellScriptLocation>
+    </PropertyGroup>
+    <ItemGroup>
+      <_PowerShellScriptsSource Include="$(_PowershellScriptLocation)Add-AppDevPackage.ps1" />
+      <_PowerShellScriptsSource Include="$(_PowershellScriptLocation)Install.ps1" />
+      <_PowerShellScriptsSource Include="$(_PowershellScriptLocation)**\Add-AppDevPackage.psd1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_PowerShellScriptsDestination Include="@(_PowerShellScriptsSource->'$(AppxPackageTestDir)%(RecursiveDir)%(FileName)%(Extension)')" />
+    </ItemGroup>
+
+    <Copy UseHardlinksIfPossible="$(AppxUseHardlinksIfPossible)" SkipUnchangedFiles="true" SourceFiles="@(_PowerShellScriptsSource)" DestinationFiles="@(_PowerShellScriptsDestination)" ContinueOnError="$(ContinueOnError)" />
+
+    <ItemGroup>
+      <PackagingFileWrites Include="@(_PowerShellScriptsDestination)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_CreateTestLayout">
+    <ItemGroup>
+      <_TestLayoutSourceFiles Condition="'%(Architecture)' == 'neutral'" Include="@(FrameworkSdkPackage)" />
+      <_TestLayoutTargetFiles Condition="'%(Architecture)' == 'neutral'" Include="@(FrameworkSdkPackage->'$(AppxPackageTestDir)Dependencies\%(FileName)%(Extension)')" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_TestLayoutSourceFiles Condition="'%(Architecture)' != 'neutral'" Include="@(FrameworkSdkPackage)" />
+      <_TestLayoutTargetFiles Condition="'%(Architecture)' != 'neutral'" Include="@(FrameworkSdkPackage->'$(AppxPackageTestDir)Dependencies\%(Architecture)\%(FileName)%(Extension)')" />
+    </ItemGroup>
+
+    <Message Importance="low" Text="Test Layout: %(_TestLayoutTargetFiles.FullPath)" />
+
+    <Copy UseHardlinksIfPossible="$(AppxUseHardlinksIfPossible)" SkipUnchangedFiles="$(AppxSkipUnchangedFiles)" SourceFiles="@(_TestLayoutSourceFiles)" DestinationFiles="@(_TestLayoutTargetFiles)" />
+
+    <ItemGroup>
+      <InstallerFileWrites Include="@(_TestLayoutTargetFiles)" />
+      <PackagingFileWrites Include="@(_TestLayoutTargetFiles)"/>
+      <PackagingDirectoryWrites Include="$(AppxPackageTestDir)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_ComputeAppxPackageOutput">
+    <ReadLinesFromFile File="$(_MultipleQualifiersPerDimensionFoundPath)" Condition="'$(AppxBundle)' == 'Auto' and Exists($(_MultipleQualifiersPerDimensionFoundPath))">
+      <Output TaskParameter="Lines" PropertyName="_MultipleQualifiersPerDimensionFound" />
+    </ReadLinesFromFile>
+
+    <PropertyGroup Condition="'$(AppxBundle)' == 'Auto'">
+      <_MultipleQualifiersPerDimensionFound Condition="'$(_MultipleQualifiersPerDimensionFound)' != 'true'">false</_MultipleQualifiersPerDimensionFound>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetPlatformVersion)' == '8.0'">
+      <ProduceAppxBundle>false</ProduceAppxBundle>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(TargetPlatformVersion)' != '8.0'">
+      <ProduceAppxBundle Condition="'$(AppxBundle)' == 'Auto'">$(_MultipleQualifiersPerDimensionFound)</ProduceAppxBundle>
+      <ProduceAppxBundle Condition="'$(AppxBundle)' == 'Never'">false</ProduceAppxBundle>
+      <ProduceAppxBundle Condition="'$(AppxBundle)' == 'Always'">true</ProduceAppxBundle>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(WindowsPackageType)'=='Sparse'">
+      <AppxPackageName>$(TargetName)</AppxPackageName>
+      <AppxPackageOutput>$(TargetDir)$(AppxPackageName)$(AppxPackageExtension)</AppxPackageOutput>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxPackageName)' != ''">
+      <AppxPackageNameNeutral>$(AppxPackageName)</AppxPackageNameNeutral>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxPackageName)' == ''">
+      <AppxPackageNameNeutral>$(ProjectName)_$(AppxManifestIdentityVersion)</AppxPackageNameNeutral>
+      <_AppxPackageConfiguration Condition="'$(Configuration)' != 'Release'">_$(Configuration)</_AppxPackageConfiguration>
+      <_AppxPackagePlatform>$(Platform)</_AppxPackagePlatform>
+      <_AppxPackagePlatform Condition="'$(RuntimeIdentifier)'!=''">@(_ProjectArchitectureItem)</_AppxPackagePlatform>
+      <AppxPackageName>$(AppxPackageNameNeutral)_$(_AppxPackagePlatform)$(_AppxPackageConfiguration)</AppxPackageName>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxStoreContainer)' == '' and '$(ProduceAppxBundle)' == 'false'">
+      <AppxStoreContainer>$(AppxPackageDir)$(AppxPackageName)$(AppxStoreContainerExtension)</AppxStoreContainer>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxPackageTestDir)' == ''">
+      <AppxPackageTestDir Condition="'$(ProduceAppxBundle)' == 'false'">$(AppxPackageDir)$(AppxPackageName)_Test\</AppxPackageTestDir>
+      <AppxPackageTestDir Condition="'$(ProduceAppxBundle)' == 'true'">$(AppxPackageDir)$(AppxPackageNameNeutral)$(_AppxPackageConfiguration)_Test\</AppxPackageTestDir>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxPackageTestExternalPackagesDir)' == ''">
+      <AppxPackageTestExternalPackagesDir Condition="'$(ProduceAppxBundle)' == 'false'">$(AppxPackageDir)$(AppxPackageName)_Test\$(ExternalPackagesDir)</AppxPackageTestExternalPackagesDir>
+      <AppxPackageTestExternalPackagesDir Condition="'$(ProduceAppxBundle)' == 'true'">$(AppxPackageDir)$(AppxPackageNameNeutral)$(_AppxPackageConfiguration)_Test\$(ExternalPackagesDir)</AppxPackageTestExternalPackagesDir>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxPackageOutput)' == ''">
+      <AppxPackageOutput Condition="'$(AppxPackageEncryptionEnabled)' != 'true'">$(AppxPackageTestDir)$(AppxPackageName)$(AppxPackageExtension)</AppxPackageOutput>
+      <AppxPackageOutput Condition="'$(AppxPackageEncryptionEnabled)' == 'true'">$(AppxPackageTestDir)$(AppxPackageName)$(AppxPackageEncryptedExtension)</AppxPackageOutput>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxSymbolPackageOutput)' == ''">
+      <AppxSymbolPackageOutput>$(AppxPackageTestDir)$(AppxPackageName)$(AppxSymbolPackageExtension)</AppxSymbolPackageOutput>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <AppxBundleDir Condition="'$(AppxBundleDir)' == ''">$(IntermediateOutputPath)$(AppxPackageNameNeutral)$(AppxBundleFolderSuffix)\</AppxBundleDir>
+      <AppxBundleDir Condition="!HasTrailingSlash('$(AppxBundleDir)')">$(AppxBundleDir)\</AppxBundleDir>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxMainPackageOutput)' == ''">
+      <AppxMainPackageOutput>$(TargetDir)$(AppxPackageName)$(AppxPackageExtension)</AppxMainPackageOutput>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxResourcePackOutputBase)' == ''">
+      <AppxResourcePackOutputBase>$(TargetDir)$(AppxPackageNameNeutral)</AppxResourcePackOutputBase>
+    </PropertyGroup>
+  </Target>
+
+
+  <PropertyGroup>
+    <_GenerateAppxManifestDependsOn>
+      BeforeGenerateAppxManifest;
+      $(_GenerateAppxManifestDependsOn);
+      _GetAppxManifestSchemaItems;
+      _GenerateAdditionalFrameworkSDKReference;
+      _GetRecursiveResolvedSDKReferences;
+      _CalculateInputsForGenerateCurrentProjectAppxManifest;
+      _GenerateCurrentProjectAppxManifest;
+      _CreateFinalAppxManifestItem;
+      AfterGenerateAppxManifest
+    </_GenerateAppxManifestDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_GenerateAppxPackageRecipeDependsOn>
+      BeforeGenerateAppxPackageRecipe;
+      $(_GenerateAppxPackageRecipeDependsOn);
+      _CalculateInputsForGenerateAppxPackageRecipe;
+      _GenerateAppxPackageRecipeFile
+    </_GenerateAppxPackageRecipeDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AllOutputGroupsDependsOn>
+      $(AllOutputGroupsDependsOn);
+      BuildOnlySettings;
+      PrepareForBuild;
+      AssignTargetPaths;
+      ResolveReferences
+    </AllOutputGroupsDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CopyLocalFilesOutputGroupDependsOn>
+      $(CopyLocalFilesOutputGroupDependsOn);
+      $(AllOutputGroupsDependsOn)
+    </CopyLocalFilesOutputGroupDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GetCopyToOutputDirectoryItemsOutputGroupDependsOn>
+      $(GetCopyToOutputDirectoryItemsOutputGroupDependsOn);
+      GetCopyToOutputDirectoryItems;
+      $(AllOutputGroupsDependsOn)
+    </GetCopyToOutputDirectoryItemsOutputGroupDependsOn>
+  </PropertyGroup>
+      
+  <PropertyGroup>
+    <ComFilesOutputGroupDependsOn>
+      $(ComFilesOutputGroupDependsOn);
+      $(AllOutputGroupsDependsOn)
+    </ComFilesOutputGroupDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CopyWinmdArtifactsOutputGroupDependsOn>
+      $(CopyWinmdArtifactsOutputGroupDependsOn);
+      GetResolvedWinMD;
+      $(AllOutputGroupsDependsOn)
+    </CopyWinmdArtifactsOutputGroupDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GetPackagingOutputsDependsOn>
+      $(GetPackagingOutputsDependsOn);
+      AssignProjectConfiguration;
+      _SplitProjectReferencesByFileExistence;
+      GetPriOutputs;
+    </GetPackagingOutputsDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <_GetPackagePropertiesDependsOn>
+      $(_GetPackagePropertiesDependsOn);
+      _GetProjectArchitecture;
+      _GetRecursiveProjectArchitecture;
+      _GetPackageArchitecture;
+      _CalculateAppxBundleProperties;
+    </_GetPackagePropertiesDependsOn>
+  </PropertyGroup>
+
+  <!-- Mapping between OS version (6.*) and marketing version string. -->
+  <!-- There is no guarantee that NTVersion always consists of first two parts of OSVersion, hence a separate field. -->
+  <ItemGroup>
+    <PlatformVersionDescription Include="Windows 8.0">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>8.0</TargetPlatformVersion>
+      <OSDescription>Windows 8.0</OSDescription>
+      <OSVersion>6.2.1</OSVersion>
+      <NTVersion>6.2</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows 8.1">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>8.1</TargetPlatformVersion>
+      <OSDescription>Windows 8.1</OSDescription>
+      <OSVersion>6.3.0</OSVersion>
+      <NTVersion>6.3</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows 8.2">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>8.2</TargetPlatformVersion>
+      <OSDescription>Windows 8.2</OSDescription>
+      <OSVersion>6.3.0</OSVersion>
+      <NTVersion>6.3</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="UAP 1.0">
+      <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+      <TargetPlatformVersion>0.8.0.0</TargetPlatformVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>7.0</TargetPlatformVersion>
+      <TargetPlatformMinVersion>7.0</TargetPlatformMinVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>10.0.17134.0</TargetPlatformVersion>
+      <TargetPlatformMinVersion>10.0.17134.0</TargetPlatformMinVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>10.0.17763.0</TargetPlatformVersion>
+      <TargetPlatformMinVersion>10.0.17134.0</TargetPlatformMinVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>10.0.18362.0</TargetPlatformVersion>
+      <TargetPlatformMinVersion>10.0.17134.0</TargetPlatformMinVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+    <PlatformVersionDescription Include="Windows">
+      <TargetPlatformIdentifier>Windows</TargetPlatformIdentifier>
+      <TargetPlatformVersion>10.0.19041.0</TargetPlatformVersion>
+      <TargetPlatformMinVersion>10.0.17134.0</TargetPlatformMinVersion>
+      <OSDescription>Windows 10.0</OSDescription>
+      <OSVersion>10.0.0</OSVersion>
+      <NTVersion>10.0</NTVersion>
+    </PlatformVersionDescription>
+  </ItemGroup>
+
+  <Target Name="_GenerateAdditionalFrameworkSDKReference">
+    <ItemGroup>
+      <_IntermediateFrameworkSdkReference Include="@(AppxPackageRegistration)"
+         Condition="'@(AppxPackageRegistration)' != ''
+                    AND ('$(Configuration)' == '%(AppxPackageRegistration.Configuration)' OR '%(AppxPackageRegistration.Configuration)' == '')
+                    AND ('$(Platform)' == '%(AppxPackageRegistration.Architecture)' OR '%(AppxPackageRegistration.Configuration)' == '')">
+        <SDKName Condition="%(AppxPackageRegistration.Name) != ''">%(AppxPackageRegistration.Name)</SDKName>
+        <SDKName Condition="%(AppxPackageRegistration.Name) == ''">%(AppxPackageRegistration.Filename)</SDKName>
+        <TargetedSDKConfiguration>%(AppxPackageRegistration.Configuration)</TargetedSDKConfiguration>
+        <TargetedSDKArchitecture>%(AppxPackageRegistration.Architecture)</TargetedSDKArchitecture>
+        <AppxLocation>%(AppxPackageRegistration.Identity)</AppxLocation>
+      </_IntermediateFrameworkSdkReference>
+
+      <FrameworkSdkReference Include="@(_IntermediateFrameworkSdkReference)">
+        <FrameworkIdentity>Name = %(_IntermediateFrameworkSdkReference.SDKName), MinVersion = %(_IntermediateFrameworkSdkReference.Version), Publisher = %(_IntermediateFrameworkSdkReference.Publisher)</FrameworkIdentity>
+      </FrameworkSdkReference>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateAppxManifest" DependsOnTargets="$(_GenerateAppxManifestDependsOn)" />
+
+  <Target Name="BeforeGenerateAppxManifest" />
+  <Target Name="AfterGenerateAppxManifest" />
+
+  <Target Name="_GetRecursiveResolvedSDKReferences">
+    <ItemGroup>
+      <_UnfilteredRecursiveResolvedSDKReference Include="@(PackagingOutputs)" Condition="'%(OutputGroup)' == 'GetResolvedSDKReferences'" />
+    </ItemGroup>
+
+    <WinAppSdkRemoveDuplicateSDKReferences Inputs="@(_UnfilteredRecursiveResolvedSDKReference)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Filtered" ItemName="RecursiveResolvedSDKReference" />
+    </WinAppSdkRemoveDuplicateSDKReferences>
+
+    <ItemGroup>
+      <FrameworkSdkReference Include="@(RecursiveResolvedSDKReference)" Condition="'%(RecursiveResolvedSDKReference.FrameworkIdentity)' != ''" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <NonFrameworkSdkReference Include="@(RecursiveResolvedSDKReference)" Condition="'%(RecursiveResolvedSDKReference.FrameworkIdentity)' == ''" />
+    </ItemGroup>
+
+    <!-- Add non-framework SDK versions to manifest build metadata. -->
+    <ItemGroup>
+      <AppxManifestMetadata Include="@(NonFrameworkSdkReference)">
+        <Name>%(NonFrameworkSdkReference.SimpleName)</Name>
+        <Version>%(NonFrameworkSdkReference.Version)</Version>
+      </AppxManifestMetadata>
+    </ItemGroup>
+
+    <WinAppSdkGetFrameworkSdkPackages FrameworkSdkReferences="@(FrameworkSdkReference)" TargetPlatformIdentifier="$(TargetPlatformIdentifier)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="FrameworkSdkPackages" ItemName="FrameworkSdkPackage" />
+    </WinAppSdkGetFrameworkSdkPackages>
+  </Target>
+
+  <Target Name="_CalculateInputsForGenerateCurrentProjectAppxManifest">
+    <ItemGroup Condition="'$(AppxHarvestWinmdRegistration)' == 'true'">
+      <_WinmdFilesFromWinmdArtifacts Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.Extension)' == '.winmd'
+                                                                                and '%(PackagingOutputs.OutputGroup)' == 'CopyWinmdArtifactsOutputGroup'
+                                                                                and '%(PackagingOutputs.ProjectName)' != '$(ProjectName)'
+                                                                                and '%(PackagingOutputs.SkipHarvestingWinmdRegistration)' != 'true'"/>
+      <_WinmdFilesFromReferences Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.Extension)' == '.winmd' and '%(PackagingOutputs.OutputGroup)' == 'CopyLocalFilesOutputGroup' and '%(PackagingOutputs.SkipHarvestingWinmdRegistration)' != 'true'" />
+      <_WinmdFilesFromOtherGroups Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.Extension)' == '.winmd'
+                                                                            and '%(PackagingOutputs.OutputGroup)' != 'CopyWinmdArtifactsOutputGroup'
+                                                                            and '%(PackagingOutputs.OutputGroup)' != 'CopyLocalFilesOutputGroup'
+                                                                            and '%(PackagingOutputs.ResolvedFrom)' != 'GetSDKReferenceFiles'
+                                                                            and '%(PackagingOutputs.SkipHarvestingWinmdRegistration)' != 'true'" />
+      <_WinmdFilesFromSDKs Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.Extension)' == '.winmd' and '%(PackagingOutputs.ResolvedFrom)' == 'GetSDKReferenceFiles' and '%(PackagingOutputs.SkipHarvestingWinmdRegistration)' != 'true'" />
+    </ItemGroup>
+
+    <WinAppSdkRemovePayloadDuplicates Inputs="@(_WinmdFilesFromWinmdArtifacts);@(_WinmdFilesFromReferences);@(_WinmdFilesFromOtherGroups);@(_WinmdFilesFromSDKs)" ProjectName="$(ProjectName)" Platform="$(Platform)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Filtered" ItemName="_AppxWinmdFilesToHarvest" />
+    </WinAppSdkRemovePayloadDuplicates>
+
+    <ItemGroup>
+      <_GenerateCurrentProjectAppxManifestInput Include="@(AppxManifest);@(AppxManifestSchema);$(PackageCertificateKeyFile);@(_AppxWinmdFilesToHarvest);$(_QualifiersPath)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateCurrentProjectAppxManifest"
+          Condition="Exists(@(AppxManifest))"
+          Inputs="$(MSBuildAllProjects);@(_GenerateCurrentProjectAppxManifestInput)"
+          Outputs="$(FinalAppxManifestName)"
+          DependsOnTargets="_GetDefaultResourceLanguage">
+    <PropertyGroup>
+      <ApplicationEntryPoint Condition="'$(ApplicationEntryPoint)'== '' and '$(WindowsPackageType)'=='MSIX'">Windows.FullTrustApplication</ApplicationEntryPoint>
+    </PropertyGroup>
+    <ItemGroup>
+      <AppxManifestMetadata Include="$(MakePriExeFullPath)" />
+
+      <!--
+        Set the default TargetDeviceFamily metadata to either Universal or Desktop. Referencing extension SDKs (Xbox, HoloLens, IOT, etc)
+        should add their respectable TargetDeviceFamily to this metadata.
+        For legacy UAP projects, the target platform identifier is UAP, so those default to universal. To simplify and remove concept
+        count, all Windows projects moving forward will have a TargetPlatformIdenitifer of Windows. The WindowsAppContainer property
+        is used to switch between a project that targets the Universal device family and one that doesn't.
+
+        Note: C++ WinAppSdk projects will also have TargetDeviceFamily=Windows.Universal as they reuse the C++
+        Universal App project system and thus TargetPlatformIdentifier==UAP.
+      -->
+      <TargetDeviceFamily Include="Windows.Universal" Condition="'$(TargetPlatformIdentifier)'=='UAP'">
+        <TargetPlatformMinVersion>$(TargetPlatformMinVersion)</TargetPlatformMinVersion>
+        <TargetPlatformVersion>$(TargetPlatformVersion)</TargetPlatformVersion>
+      </TargetDeviceFamily>
+      <TargetDeviceFamily Include="Windows.Desktop" Condition="'$(TargetPlatformIdentifier)'=='Windows'">
+        <TargetPlatformMinVersion>$(TargetPlatformMinVersion)</TargetPlatformMinVersion>
+        <TargetPlatformVersion>$(TargetPlatformVersion)</TargetPlatformVersion>
+      </TargetDeviceFamily>
+    </ItemGroup>
+
+    <Error Condition="'$(AppxPackageSigningEnabled)' != 'true' and '$(WindowsPackageType)'=='Sparse'"
+           Text="Sparse packages are required to be signed in order to be registered. Please specify a certificate using the PackageCertificateKeyFile property."/>
+
+    <WinAppSdkGenerateAppxManifest AppxManifestInput="@(AppxManifest)"
+                          AppxManifestOutput="$(FinalAppxManifestName)"
+                          ApplicationExecutableName="$(TargetName)"
+                          FrameworkSdkReferences="@(FrameworkSdkReference)"
+                          NonFrameworkSdkReferences="@(NonFrameworkSdkReference)"
+                          CertificateThumbprint="$(PackageCertificateThumbprint)"
+                          CertificateFile="$(PackageCertificateKeyFile)"
+                          DefaultResourceLanguage="$(DefaultResourceLanguage)"
+                          QualifiersPath="$(_QualifiersPath)"
+                          PackageArchitecture="$(PackageArchitecture)"
+                          SDKWinmdFiles="@(_AppxSDKWinmdFilesForHarvest)"
+                          WinmdFiles="@(_AppxWinmdFilesToHarvest)"
+                          ManagedWinmdInprocImplementation="$(ManagedWinmdInprocImplementation)"
+                          PackageSigningEnabled="$(AppxPackageSigningEnabled)"
+                          EnableSigningChecks="$(EnableSigningChecks)"
+                          ManifestMetadata="@(AppxManifestMetadata)"
+                          MetadataNamespaceUri="$(MetadataNamespaceUri)"
+                          TargetDeviceFamilies="@(TargetDeviceFamily)"
+                          VsTelemetrySession="$(VsTelemetrySession)"
+                          WinmdCacheEnabled="$(AppxWinMdCacheEnabled)"
+                          WinmdCacheDir="$(AppxWinMdCacheDir)"
+                          RestrictedCapabilitiesNamespaceUri="$(RestrictedCapabilitiesNamespaceUri)"
+                          DesktopNamespaceUri="$(DesktopNamespaceUri)"
+                          Uap10NamespaceUri="$(Uap10NamespaceUri)"
+                          EntryPoint="$(ApplicationEntryPoint)"
+                          WindowsPackageType="$(WindowsPackageType)">
+        <Output TaskParameter="Identity" PropertyName="MsixIdentity"/>
+        <Output TaskParameter="IdentityPublisher" PropertyName="MsixIdentityPublisher"/>
+        <Output TaskParameter="ApplicationId" PropertyName="MsixApplicationId"/>
+      </WinAppSdkGenerateAppxManifest>
+
+    <ItemGroup Condition="'$(WindowsPackageType)'=='Sparse'">
+      <SxSManifestLinesForSparsePackage Include="&lt;assembly manifestVersion='1.0' xmlns='urn:schemas-microsoft-com:asm.v1'&gt;"/>
+      <SxSManifestLinesForSparsePackage Include="&lt;msix xmlns='urn:schemas-microsoft-com:msix.v1'"/>
+      <SxSManifestLinesForSparsePackage Include="publisher='$(MsixIdentityPublisher)'"/>
+      <SxSManifestLinesForSparsePackage Include="packageName='$(MsixIdentity)'"/>
+      <SxSManifestLinesForSparsePackage Include="applicationId='$(MsixApplicationId)' /&gt;"/>
+      <SxSManifestLinesForSparsePackage Include="&lt;/assembly&gt;"/>
+    </ItemGroup>
+
+    <WriteLinesToFile Condition="'$(WindowsPackageType)'=='Sparse'"
+                      File="$(IntermediateOutputPath)msix.generated.manifest"
+                      Overwrite="true"
+                      Lines="@(SxSManifestLinesForSparsePackage)" />
+
+    <ItemGroup Condition="'$(WindowsPackageType)'=='Sparse'">
+      <WinAppSdkWin32Manifest Include="$(IntermediateOutputPath)msix.generated.manifest"/>
+      <FileWrites Include="$(IntermediateOutputPath)msix.generated.manifest"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <FileWrites Conditon="'$(AppxWinMdCacheEnabled)' == 'true'" Include="$(AppxWinMdCacheDir)\**\*"></FileWrites>
+    </ItemGroup>
+
+    <Message Importance="low" Text="@(AppxManifest) -> $(FinalAppxManifestName)" />
+
+</Target>
+
+  <!-- In order for incremental build and clean to work correctly we are creating build item @(FinalAppxManifest) and @(FileWrites) in the target which always executes. -->
+  <Target Name="_CreateFinalAppxManifestItem">
+    <ItemGroup>
+      <FinalAppxManifest Include="$(FinalAppxManifestName)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <FileReads Include="@(_GenerateCurrentProjectAppxManifestInput)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <FileWrites Include="@(FinalAppxManifest)"/>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GetAppxManifestSchemaItems" Condition="'@(AppxManifestSchema)' == ''">
+    <ItemGroup>
+      <AppxManifestSchema Include="$(_TargetPlatformSdkDir)\Include\$(TargetPlatformVersion)\WinRT\FoundationManifestSchema.xsd">
+        <NamespaceAlias>m</NamespaceAlias>
+        <NamespaceUri>http://schemas.microsoft.com/appx/manifest/foundation/windows10</NamespaceUri>
+      </AppxManifestSchema>
+      <AppxManifestSchema Include="$(_TargetPlatformSdkDir)\Include\$(TargetPlatformVersion)\WinRT\UapManifestSchema.xsd">
+        <NamespaceAlias>uap</NamespaceAlias>
+        <NamespaceUri>http://schemas.microsoft.com/appx/manifest/uap/windows10</NamespaceUri>
+      </AppxManifestSchema>
+    </ItemGroup>
+
+    <!-- Define AppxValidateStoreManifest based on whether we ended up with any StoreManifestSchemas or not.  This keeps the logic agnostic about which TargetPlatform/Version supports validating the Store manifest. -->
+    <PropertyGroup>
+      <AppxValidateStoreManifest Condition="'$(AppxValidateStoreManifest)' == '' and '@(StoreManifestSchema)' != ''">true</AppxValidateStoreManifest>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <MetadataNamespaceUri Condition="'$(MetadataNamespaceUri)' == '' and '$(SDKIdentifier)' != ''">http://schemas.microsoft.com/developer/appx/2015/build</MetadataNamespaceUri>
+      <MetadataNamespaceUri Condition="'$(MetadataNamespaceUri)' == ''">http://schemas.microsoft.com/developer/appx/2012/build</MetadataNamespaceUri>
+      <RestrictedCapabilitiesNamespaceUri Condition="'$(RestrictedCapabilitiesNamespaceUri)' == ''">http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities</RestrictedCapabilitiesNamespaceUri>
+      <DesktopNamespaceUri Condition="'$(DesktopNamespaceUri)'==''">http://schemas.microsoft.com/appx/manifest/desktop/windows10</DesktopNamespaceUri>
+      <Uap10NamespaceUri Condition="'$(Uap10NamespaceUri)'==''">http://schemas.microsoft.com/appx/manifest/uap/windows10/10</Uap10NamespaceUri>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="_GetProjectArchitecture" Returns="@(ProjectArchitecture)">
+    <PropertyGroup>
+      <_ProjectArchitectureOutput>Invalid</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(Platform)' == 'x86'">x86</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(Platform)' == 'Win32'">x86</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(Platform)' == 'x64'">x64</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(Platform)' == 'arm'">arm</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(Platform)' == 'arm64'">arm64</_ProjectArchitectureOutput>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Platform)' == 'AnyCPU' or '$(Platform)' == 'Any CPU'">
+      <_ProjectArchitectureOutput>neutral</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(RuntimeIdentifier)' == 'win10-x86'">x86</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(RuntimeIdentifier)' == 'win10-x64'">x64</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(RuntimeIdentifier)' == 'win10-arm'">arm</_ProjectArchitectureOutput>
+      <_ProjectArchitectureOutput Condition="'$(RuntimeIdentifier)' == 'win10-arm64'">arm64</_ProjectArchitectureOutput>
+    </PropertyGroup>
+    <Error Condition="'$(UseAppHost)' == 'true' and '$(_ProjectArchitectureOutput)' == 'neutral' and '$(AllowNeutralPackageWithAppHost)' != 'true'"
+      Text="Packaged .NET applications with an app host exe cannot be ProcessorArchitecture neutral. Please specify a RuntimeIdentifier or a Platform other than AnyCPU." />
+    <ItemGroup>
+      <ProjectArchitecture Include="$(_ProjectArchitectureOutput)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyLocalFilesOutputGroup" DependsOnTargets="$(CopyLocalFilesOutputGroupDependsOn)" Returns="@(CopyLocalFilesOutputGroupOutput)">
+    <ItemGroup>
+      <CopyLocalFilesOutputGroupOutput Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' != '.xml' or '$(AppxCopyLocalFilesOutputGroupIncludeXmlFiles)' == 'true'">
+        <TargetPath>%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</TargetPath>
+      </CopyLocalFilesOutputGroupOutput>
+    </ItemGroup>
+
+    <!-- In case of Winmd files, we may not get implementation file as separate CopyLocal file (if exist), so we are extracting it here. -->
+    <ItemGroup>
+      <_WinmdWithImplementation Include="@(CopyLocalFilesOutputGroupOutput)" Condition="'%(CopyLocalFilesOutputGroupOutput.Extension)' == '.winmd' AND '%(CopyLocalFilesOutputGroupOutput.Filename)' != 'platform' AND '%(CopyLocalFilesOutputGroupOutput.Implementation)' != ''"/>
+
+      <!-- Determine if any existing copy-local item has already satisfied the implementation -->
+      <_WinmdWithImplementationTargetPath Include="@(_WinmdWithImplementation->'%(DestinationSubDirectory)%(Implementation)')">
+        <OriginalItemSpec>%(Identity)</OriginalItemSpec>
+      </_WinmdWithImplementationTargetPath>
+      <_CopyLocalFilesOutputGroupOutputTargetPath Include="@(CopyLocalFilesOutputGroupOutput->'%(TargetPath)')"/>
+      <!-- intersect on targetpath -->
+      <_WinmdSatifiedImplementation Include="@(_WinmdWithImplementationTargetPath)" Condition="'@(_WinmdWithImplementationTargetPath)' == '@(_CopyLocalFilesOutputGroupOutputTargetPath)' AND '%(Identity)' != ''"/>
+      <_WinmdWithImplementation Remove="@(_WinmdSatifiedImplementation->'%(OriginalItemSpec)')" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <CopyLocalFilesOutputGroupOutput Include="%(_WinmdWithImplementation.RootDir)%(_WinmdWithImplementation.Directory)%(_WinmdWithImplementation.Implementation)">
+        <TargetPath>%(_WinmdWithImplementation.DestinationSubDirectory)%(_WinmdWithImplementation.Implementation)</TargetPath>
+      </CopyLocalFilesOutputGroupOutput>
+    </ItemGroup>
+  </Target>
+
+   <Target Name="GetCopyToOutputDirectoryItemsOutputGroup"
+          DependsOnTargets="$(GetCopyToOutputDirectoryItemsOutputGroupDependsOn)"
+          Returns="@(GetCopyToOutputDirectoryItemsOutputGroupOutput)">
+    <ItemGroup>
+      <GetCopyToOutputDirectoryItemsOutputGroupOutput Include="@(AllItemsFullPathWithTargetPath)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="ComFilesOutputGroup" DependsOnTargets="$(ComFilesOutputGroupDependsOn)" Returns="@(ComFilesOutputGroupOutputs)">
+    <ItemGroup>
+      <ComFilesOutputGroupOutputs Include="@(ReferenceComWrappersToCopyLocal)" >
+        <TargetPath>%(ReferenceComWrappersToCopyLocal.Filename)%(ReferenceComWrappersToCopyLocal.Extension)</TargetPath>
+      </ComFilesOutputGroupOutputs>
+      <ComFilesOutputGroupOutputs Include="@(ResolvedIsolatedComModules)" >
+        <TargetPath>%(ResolvedIsolatedComModules.Filename)%(ResolvedIsolatedComModules.Extension)</TargetPath>
+      </ComFilesOutputGroupOutputs>
+      <ComFilesOutputGroupOutputs Include="@(NativeReferenceFile)" >
+        <TargetPath>%(NativeReferenceFile.Filename)%(NativeReferenceFile.Extension)</TargetPath>
+      </ComFilesOutputGroupOutputs>
+    </ItemGroup>
+  </Target>
+
+  <Target
+      Name="CopyWinMDArtifactsOutputGroup"
+      DependsOnTargets="$(CopyWinmdArtifactsOutputGroupDependsOn)"
+      Returns="@(CopyWinMDArtifactsOutputGroupOutput)">
+
+    <ItemGroup>
+      <CopyWinMDArtifactsOutputGroupOutput Include="@(WinMDFullPath)">
+        <TargetPath>%(Filename)%(Extension)</TargetPath>
+      </CopyWinMDArtifactsOutputGroupOutput>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="__GetPublishItems" DependsOnTargets="ComputeFilesToPublish" Returns="@(_PublishItem)">
+    <ItemGroup>
+      <_PublishItem Include="@(ResolvedFileToPublish->'%(FullPath)')" TargetPath="%(ResolvedFileToPublish.RelativePath)" OutputGroup="__GetPublishItems" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    __SnapshotResolvedFileToPublishBeforeOptimization
+    __SnapshotResolvedFileToPublishAfterOptimization
+    __BackCalculateOptimizationInputAssemblies
+
+    We use these targets to figure out which assemblies were processed by either ReadyToRun compilation
+    or IL Linking (Trimming) so that we can remove them from @(PackagingOutputs) and prevent MSIX duplicate 
+    payload errors caused by including both the inputs and outputs of the ReadyToRun/Linking targets.
+    Unfortunately, the necessary information is defined by the .NET SDK using private-scope-by-convention 
+    names so we shouldn't rely on them. Instead, we can take advantage of the fact that the .NET SDK has 
+    to apply a similar operation to @(ResolvedFileToPublish) to prevent conflicts in the Publish output. 
+    The CreateReadyToRunImages/ILLink targets are responsible for this cleanup, so if we take snapshots of
+    @(ResolvedFileToPublish) before and after these targets run, then remove from the "before" snapshot
+    the items present in the "after" snapshot, then by definition the remaining items are the ones
+    cleaned up by the CreateReadyToRunImages/ILLink targets. These are the items we need to then remove
+    from @(PackagingOutputs)
+  -->
+  <Target Name="__SnapshotResolvedFileToPublishBeforeOptimization"
+          AfterTargets="ComputeResolvedFilesToPublishList" 
+          BeforeTargets="CreateReadyToRunImages;ILLink">
+    <ItemGroup>
+      <_BeforeOptimizationImagesSnapshot Remove="@(_BeforeOptimizationImagesSnapshot)" />
+      <_BeforeOptimizationImagesSnapshot Include="@(ResolvedFileToPublish->'%(FullPath)')" />
+    </ItemGroup>
+  </Target>
+  <Target Name="__SnapshotResolvedFileToPublishAfterOptimization"
+          DependsOnTargets="CreateReadyToRunImages;ILLink">
+    <ItemGroup>
+      <_AfterOptimizationImagesSnapshot Remove="@(_AfterOptimizationImagesSnapshot)" />
+      <_AfterOptimizationImagesSnapshot Include="@(ResolvedFileToPublish->'%(FullPath)')" />
+    </ItemGroup>
+  </Target>
+  <Target Name="__BackCalculateOptimizationInputAssemblies" 
+          DependsOnTargets="__SnapshotResolvedFileToPublishBeforeOptimization;__SnapshotResolvedFileToPublishAfterOptimization" 
+          Returns="@(_OptimizationInputAssemblies)">
+    <ItemGroup>
+      <_OptimizationInputAssemblies Include="@(_BeforeOptimizationImagesSnapshot)" />
+      <_OptimizationInputAssemblies Remove="@(_AfterOptimizationImagesSnapshot)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    GetPackagingOutputs is a target, that like, GetPriOutputs, invokes well-known targets that ship with MSBuild,
+    to populate certain OutputGroups. This file also defines certain OutputGroups that are only relevant for
+    MSIX packaging (i.e. ComFilesOutputGroup and CopyWinmdArtifactsOutputGroup).
+
+    This target depends on the GetPriOutputs target running, since pri files are also part of the msix packaging
+    process.
+  -->
+  <Target Name="GetPackagingOutputs" Returns="@(PackagingOutputs)" DependsOnTargets="$(GetPackagingOutputsDependsOn)">
+    <PropertyGroup>
+      <!--
+        For .NET applications, we always need to include publish items output group, because this includes the exe. We ignore libraries since publish
+        is an application verb and library projects are built for AnyCPU, so including publish output groups will include native assets for every platform
+        instead of just the one being built for.
+      -->
+      <IncludePublishItemsOutputGroup Condition="'$(IncludePublishItemsOutputGroup)'=='' and '$(UsingMicrosoftNETSdk)'=='true' and '$(OutputType)'=='WinExe' ">true</IncludePublishItemsOutputGroup>
+      <IncludeBuiltProjectOutputGroup Condition="'$(IncludeBuiltProjectOutputGroup)' == ''">true</IncludeBuiltProjectOutputGroup>
+      <IncludeCopyLocalFilesOutputGroup Condition="'$(IncludeCopyLocalFilesOutputGroup)' == ''">true</IncludeCopyLocalFilesOutputGroup>
+      <IncludeContentFilesProjectOutputGroup Condition="'$(IncludeContentFilesProjectOutputGroup)' == ''">true</IncludeContentFilesProjectOutputGroup>
+
+      <IncludeDebugSymbolsProjectOutputGroup Condition="'$(IncludeDebugSymbolsProjectOutputGroup)' == ''">true</IncludeDebugSymbolsProjectOutputGroup>
+      <IncludeDocumentationProjectOutputGroup Condition="'$(IncludeDocumentationProjectOutputGroup)' == ''">false</IncludeDocumentationProjectOutputGroup>
+      <IncludeSatelliteDllsProjectOutputGroup Condition="'$(IncludeSatelliteDllsProjectOutputGroup)' == ''">false</IncludeSatelliteDllsProjectOutputGroup>
+      <IncludeSourceFilesProjectOutputGroup Condition="'$(IncludeSourceFilesProjectOutputGroup)' == ''">false</IncludeSourceFilesProjectOutputGroup>
+      <IncludeSGenFilesOutputGroup Condition="'$(IncludeSGenFilesOutputGroup)' == ''">false</IncludeSGenFilesOutputGroup>
+      <IncludeOptionalProjectsOutputGroup Condition="'$(IncludeOptionalProjectsOutputGroup)' == ''">true</IncludeOptionalProjectsOutputGroup>
+      <IncludeGetCopyToOutputDirectoryItemsOutputGroup Condition="'$(IncludeGetCopyToOutputDirectoryItemsOutputGroup)' == ''">true</IncludeGetCopyToOutputDirectoryItemsOutputGroup>
+      <IncludeComFilesOutputGroup Condition="'$(IncludeComFilesOutputGroup)' == ''">false</IncludeComFilesOutputGroup>
+      <IncludeCustomOutputGroupForPackaging Condition="'$(IncludeCustomOutputGroupForPackaging)' == ''">false</IncludeCustomOutputGroupForPackaging>
+      <IncludeCopyWinmdArtifactsOutputGroup Condition="'$(IncludeCopyWinmdArtifactsOutputGroup)' == ''">true</IncludeCopyWinmdArtifactsOutputGroup>
+      <IncludeSDKRedistOutputGroup Condition="'$(IncludeSDKRedistOutputGroup)' == ''">true</IncludeSDKRedistOutputGroup>
+      <IncludeGetResolvedSDKReferences Condition="'$(IncludeGetResolvedSDKReferences)' == ''">true</IncludeGetResolvedSDKReferences>
+    </PropertyGroup>
+
+    <CallTarget Targets="BuiltProjectOutputGroup" Condition="'$(IncludeBuiltProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_BuiltProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup >
+        <_PackagingOutputsUnexpanded Include="%(_BuiltProjectOutputGroupOutput.FinalOutputPath)">
+            <TargetPath>%(_BuiltProjectOutputGroupOutput.TargetPath)</TargetPath>
+            <OutputGroup>BuiltProjectOutputGroup</OutputGroup>
+            <ProjectName>$(ProjectName)</ProjectName>
+        </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="__GetPublishItems" Condition="'$(IncludePublishItemsOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_PublishItemsOutputGroupOutput" />
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_PublishItemsOutputGroupOutput)">
+        <OutputGroup>PublishItemsOutputGroupOutput</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="DebugSymbolsProjectOutputGroup" Condition="'$(IncludeDebugSymbolsProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_DebugSymbolsProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="%(_DebugSymbolsProjectOutputGroupOutput.FinalOutputPath)">
+        <OutputGroup>DebugSymbolsProjectOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="DocumentationProjectOutputGroup" Condition="'$(IncludeDocumentationProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_DocumentationProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_DocumentationProjectOutputGroupOutput)">
+        <OutputGroup>DocumentationProjectOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="SatelliteDllsProjectOutputGroup" Condition="'$(IncludeSatelliteDllsProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_SatelliteDllsProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_SatelliteDllsProjectOutputGroupOutput)">
+        <OutputGroup>SatelliteDllsProjectOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="SourceFilesProjectOutputGroup" Condition="'$(IncludeSourceFilesProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_SourceFilesProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_SourceFilesProjectOutputGroupOutput)">
+        <OutputGroup>SourceFilesProjectOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="SGenFilesOutputGroup" Condition="'$(IncludeSGenFilesOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_SGenFilesOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_SGenFilesOutputGroupOutput)">
+        <OutputGroup>SGenFilesOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="CopyLocalFilesOutputGroup" Condition="'$(IncludeCopyLocalFilesOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_CopyLocalFilesOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_CopyLocalFilesOutputGroupOutput)" Condition="'%(Extension)'!='.pri'">
+        <OutputGroup>CopyLocalFilesOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <!-- Include transitive items from ProjectReferences.  See _GetCopyToOutputDirectoryItemsFromTransitiveProjectReferences. -->
+    <CallTarget Targets="GetCopyToOutputDirectoryItemsOutputGroup" Condition="'$(IncludeGetCopyToOutputDirectoryItemsOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_GetCopyToOutputDirectoryItemsOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup Condition="'$(IncludeGetCopyToOutputDirectoryItemsOutputGroup)' == 'true'">
+      <!-- If both XBF and XAML files are present, add only the XBF file to the package. --> 
+      <_RedundantXaml Include="@(_GetCopyToOutputDirectoryItemsOutputGroupOutput->'%(RootDir)%(Directory)%(Filename).xaml')"
+        Condition="'%(Extension)'=='.xbf'" />
+      <_GetCopyToOutputDirectoryItemsOutputGroupOutput Remove="@(_RedundantXaml)"/>
+
+      <!-- If conflicting build and publish deps.json files are present, use only the publish deps.json, 
+        and remove the corresponding build deps.json. -->
+      <_PublishDepsJson Include="@(_PublishItemsOutputGroupOutput->'%(Filename)%(Extension)')"
+        Condition="'@(_PublishItemsOutputGroupOutput)'!='' and $([System.String]::Copy(%(FileName)%(Extension)).EndsWith('.deps.json'))" />
+      <_GetCopyToOutputDirectoryItemsOutputGroupOutput Remove="@(_PublishDepsJson)" MatchOnMetadata="TargetPath"/>
+
+      <_PackagingOutputsUnexpanded Include="@(_GetCopyToOutputDirectoryItemsOutputGroupOutput)">
+        <OutputGroup>GetCopyToOutputDirectoryItemsOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="ComFilesOutputGroup" Condition="'$(IncludeComFilesOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_ComFilesOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_ComFilesOutputGroupOutput)">
+        <OutputGroup>ComFilesOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="CopyWinmdArtifactsOutputGroup" Condition="'$(IncludeCopyWinmdArtifactsOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_CopyWinmdArtifactsOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_CopyWinmdArtifactsOutputGroupOutput)">
+        <OutputGroup>CopyWinmdArtifactsOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="SDKRedistOutputGroup" Condition="'$(IncludeSDKRedistOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_SDKRedistOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup Condition="'$(AppxExcludeXbfFromSdkPayloadWhenXamlIsPresent)' == 'true'">
+      <!-- If extension SDK contains both XAML and XBF files, do not package XBF files from SDK -->
+      <_SDKRedistRedundantXBF Include="@(_SDKRedistOutputGroupOutput->'%(RootDir)%(Directory)%(Filename).xbf')"
+                              Condition="'%(Extension)'=='.xaml'" />
+      <_SDKRedistOutputGroupOutput Remove="@(_SDKRedistRedundantXBF)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_PackagingOutputsUnexpanded Include="@(_SDKRedistOutputGroupOutput)">
+        <OutputGroup>SDKRedistOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PackagingOutputsUnexpanded>
+      <_PackagingOutputsUnexpanded Remove="@(RemoveSdkFilesFromAppxPackage)" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(DisableEmbeddedXbf)' != 'true'">
+      <_PackagingOutputsUnexpanded Include="@(_CustomOutputGroupForPackagingOutput)" Condition="'%(_CustomOutputGroupForPackagingOutput.ReferenceSourceTarget)' == 'ExpandSDKReference'">
+        <OutputGroup>SDKRedistOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath Condition="'$(AppxPackage)' != 'true' and '$(AppxPriInitialPath)' != ''">$(AppxPriInitialPath)\%(_CustomOutputGroupForPackagingOutput.TargetPath)</TargetPath>
+      </_PackagingOutputsUnexpanded>
+      <_CustomOutputGroupForPackagingOutput Remove="@(_CustomOutputGroupForPackagingOutput)" Condition="'%(_CustomOutputGroupForPackagingOutput.ReferenceSourceTarget)' == 'ExpandSDKReference'"/>
+    </ItemGroup>
+
+    <!-- Remove inputs to CreateReadyToRunImages/ILLink targets -->
+    <CallTarget Targets="__BackCalculateOptimizationInputAssemblies" Condition="'$(PublishReadyToRun)' == 'true' or '$(PublishTrimmed)'=='true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_OptimizationInputsToRemove"/>
+    </CallTarget>
+    <ItemGroup Condition="'$(PublishReadyToRun)' == 'true' or '$(PublishTrimmed)'=='true'">
+      <_PackagingOutputsUnexpanded Remove="@(_OptimizationInputsToRemove)" />
+      <!--Also remove optimized inputs added indirectly via FinalOutputPath metadata-->
+      <_OutputGroupOutputs Include="@(_BuiltProjectOutputGroupOutput);@(_DebugSymbolsProjectOutputGroupOutput)" />
+      <_OutputGroupOutputsNotOptimized Include="@(_OutputGroupOutputs)" Exclude="@(_OptimizationInputsToRemove)" />
+      <_OutputGroupOutputsOptimized Include="@(_OutputGroupOutputs)" Exclude="@(_OutputGroupOutputsNotOptimized)" />
+      <_PackagingOutputsUnexpanded Remove="@(_OutputGroupOutputsOptimized->'%(FinalOutputPath)')" />
+    </ItemGroup>
+
+    <WinAppSdkExpandPayloadDirectories Inputs="@(_PackagingOutputsUnexpanded)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Expanded" ItemName="_PackagingOutputsExpanded" />
+    </WinAppSdkExpandPayloadDirectories>
+
+    <CallTarget Targets="GetResolvedSDKReferences" Condition="'$(IncludeGetResolvedSDKReferences)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_GetResolvedSDKReferencesOutputWithoutMetadata"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_GetResolvedSDKReferencesOutput Include="@(_GetResolvedSDKReferencesOutputWithoutMetadata)">
+        <OutputGroup>GetResolvedSDKReferences</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_GetResolvedSDKReferencesOutput>
+    </ItemGroup>
+
+    <CallTarget Targets="_GetProjectArchitecture">
+      <Output TaskParameter="TargetOutputs" ItemName="_ProjectArchitecture" />
+    </CallTarget>
+
+    <ItemGroup>
+      <_ProjectArchitectureItem Include="@(_ProjectArchitecture)">
+        <OutputGroup>_GetProjectArchitecture</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_ProjectArchitectureItem>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_ContinueOnError Condition="'$(BuildingProject)' == 'true'">false</_ContinueOnError>
+      <_ContinueOnError Condition="'$(BuildingProject)' != 'true'">true</_ContinueOnError>
+    </PropertyGroup>
+
+    <MSBuild
+      Projects="@(ProjectReferenceWithConfiguration)"
+      Targets="GetPackagingOutputs"
+      BuildInParallel="$(BuildInParallel)"
+      Properties="%(ProjectReferenceWithConfiguration.SetConfiguration); %(ProjectReferenceWithConfiguration.SetPlatform)"
+      Condition="'@(ProjectReferenceWithConfiguration)' != ''
+                 and '%(ProjectReferenceWithConfiguration.BuildReference)' == 'true'
+                 and '%(ProjectReferenceWithConfiguration.ReferenceOutputAssembly)' == 'true'"
+      ContinueOnError="$(_ContinueOnError)">
+      <Output TaskParameter="TargetOutputs" ItemName="_PackagingOutputsFromOtherProjects"/>
+    </MSBuild>
+
+    <ItemGroup>
+      <_PackagingOutputsOutsideLayout Include="@(ProjectPriFile)" />
+      <_PackagingOutputsOutsideLayout Include="@(_PackagingOutputsExpanded)" />
+      <_PackagingOutputsOutsideLayout Include="@(PriOutputs)" />
+      <_PackagingOutputsOutsideLayout Include="@(_GetResolvedSDKReferencesOutput)" />
+      <!-- Exclude any PRIOutputs that come from other projects so we avoid duplicates -->
+      <_PackagingOutputsOutsideLayout Include="@(_PackagingOutputsFromOtherProjects)" Exclude="@(PriOutputs)"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <PathsToExcludeFromLayoutOutputGroup Include="@(_PackagingOutputsOutsideLayout->'%(TargetPath)')" />
+      <PathsToExcludeFromLayoutOutputGroup Include="$(AppxManifestTargetPath)" />
+      <PathsToExcludeFromLayoutOutputGroup Include="$(DeploymentRecipeTargetPath)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <DirsToExcludeFromLayoutOutputGroup Include="$(WinMetadataDir)" />
+      <DirsToExcludeFromLayoutOutputGroup Include="$(EntryPointDir)" />
+    </ItemGroup>
+
+    <WinAppSdkExpandPayloadDirectories Condition="'$(IncludeLayoutFilesInPackage)' == 'true'" Inputs="$(LayoutDir)" TargetDirsToExclude="@(DirsToExcludeFromLayoutOutputGroup)" TargetFilesToExclude="@(PathsToExcludeFromLayoutOutputGroup)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Expanded" ItemName="_PackagingOutputsFromLayout" />
+    </WinAppSdkExpandPayloadDirectories>
+
+    <ItemGroup>
+      <PackagingOutputs Include="@(_PackagingOutputsFromLayout)">
+        <ProjectName>$(ProjectName)</ProjectName>
+        <OutputGroup>LayoutOutputGroup</OutputGroup>
+      </PackagingOutputs>
+      <PackagingOutputs Include="@(_PackagingOutputsOutsideLayout)" />
+      <PackagingOutputs Include="@(_ProjectArchitectureItem)" />
+    </ItemGroup>
+
+    <!-- Remove all .xaml files from the payload that correlate with a .xbf file -->
+    <ItemGroup>
+      <_PackagingOutputsXbfXaml Include="$([System.IO.Path]::ChangeExtension('%(PackagingOutputs.Identity)','.xaml'))" Condition="'%(Extension)' == '.xbf'" />
+      <PackagingOutputs Remove="@(_PackagingOutputsXbfXaml)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_ComputeAppxPackagePayload">
+    <ItemGroup>
+      <!-- If a nuget package contains a .pri file, the .NET SDK puts the .pri file in the deps.json - so we can't filter it out here
+        <_UnfilteredAppxPackagePayload Include="@(PackagingOutputs)" Condition="'%(Extension)' != '.pri' AND '%(OutputGroup)' != 'GetResolvedSDKReferences' AND '%(OutputGroup)' != '_GetProjectArchitecture' AND '%(OutputGroup)' != 'EmbedOutputGroupForPackaging'"/>
+      -->
+      <!--
+        We ignore the following files in the payload:
+        OutputGroup.GetResolvedSDKReferences - These items are framework packages, and thus shouldn't be in the app package.
+          They will instead be referenced by the manifest.
+        OutputGroup._GetProjectArchitecture - This item is not meaningful and is something like "x64"
+        OutputGroup.EmbedOutputGroupForPackaging - These files will be embedded in a PRI file.
+      -->
+      <_UnfilteredAppxPackagePayload Include="@(PackagingOutputs)"
+                                     Condition="'%(PackagingOutputs.OutputGroup)' != 'GetResolvedSDKReferences' AND
+                                                '%(PackagingOutputs.OutputGroup)' != '_GetProjectArchitecture' AND
+                                                '%(PackagingOutputs.OutputGroup)' != 'EmbedOutputGroupForPackaging'"/>
+      <_UnfilteredAppxPackagePayload Include="@(ProjectPriFile)" />
+
+      <!-- We also want to ignore .xaml files from project references that were automatically added to
+           BuiltProjectOutputGroup to support the Nuget Pack target -->
+      <_XamlFilesFromProjectReferences 
+        Include="@(PackagingOutputs)"
+        Condition="'%(PackagingOutputs.OutputGroup)'=='BuiltProjectOutputGroup' AND
+                   '%(PackagingOutputs.ReferenceSourceTarget)'=='ProjectReference' AND
+                   '%(PackagingOutputs.Extension)'=='.xaml'" />
+      <_UnfilteredAppxPackagePayload Remove="@(_XamlFilesFromProjectReferences)" />
+
+    </ItemGroup>
+
+    <!-- The above comments apply to the ItemGroup below -->
+    <ItemGroup Condition="'$(BuildAppxUploadPackageForUap)' == 'true'">
+      <!--<_UnfilteredAppxUploadPackagePayload Include="@(PackagingOutputs)" Condition="'%(Extension)' != '.pri' AND '%(OutputGroup)' != 'GetResolvedSDKReferences' AND '%(OutputGroup)' != '_GetProjectArchitecture' AND '%(OutputGroup)' != 'EmbedOutputGroupForPackaging'"/> -->
+      <_UnfilteredAppxUploadPackagePayload Include="@(PackagingOutputs)"
+                                           Condition="'%(PackagingOutputs.OutputGroup)' != 'GetResolvedSDKReferences' AND
+                                                      '%(PackagingOutputs.OutputGroup)' != '_GetProjectArchitecture'AND
+                                                      '%(PackagingOutputs.OutputGroup)' != 'EmbedOutputGroupForPackaging'"/>
+      <_UnfilteredAppxUploadPackagePayload Include="@(ProjectPriUploadFile)" />
+    </ItemGroup>
+
+    <!-- Users can manually populate the AppxPackagePayload. In the .NetNative case, this is handled by ILC. Otherwise, we need to retain those files -->
+    <ItemGroup Condition="'$(UseDotNetNativeToolchain)' != 'true'">
+
+      <!-- If the user added a payload with a rooted path, we can safely use that -->
+      <_UnfilteredAppxPackagePayload Condition="$([System.IO.Path]::IsPathRooted('%(Identity)')) == 'true'" Include="@(AppxPackagePayload->'%(Identity)')">
+        <TargetPath>$([System.String]::Copy('%(AppxPackagePayload..TargetPath)').Replace('\\','\'))</TargetPath>
+      </_UnfilteredAppxPackagePayload>
+
+      <!-- If the user added a payload with a relative path, we make the assumption that it's relative to the project root and build out the full path -->
+      <_UnfilteredAppxPackagePayload Condition="$([System.IO.Path]::IsPathRooted('%(Identity)')) == 'false'" Include="@(AppxPackagePayload->'$(MSBuildProjectDirectory)\%(Identity)')">
+        <TargetPath>$([System.String]::Copy('%(AppxPackagePayload..TargetPath)').Replace('\\','\'))</TargetPath>
+      </_UnfilteredAppxPackagePayload>
+
+      <!-- Reset the AppxPackagePayload to avoid duplicate entries later -->
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" />
+    </ItemGroup>
+
+    <WinAppSdkRemovePayloadDuplicates Inputs="@(_UnfilteredAppxPackagePayload)" HasSharedItems="$(HasSharedItems)" MSBuildProjectDirectory="$(MSBuildProjectDirectory)" ProjectName="$(ProjectName)" Platform="$(Platform)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Filtered" ItemName="AppxPackagePayload" />
+    </WinAppSdkRemovePayloadDuplicates>
+
+    <WinAppSdkRemovePayloadDuplicates Condition="'$(BuildAppxUploadPackageForUap)' == 'true'" Inputs="@(_UnfilteredAppxUploadPackagePayload)" HasSharedItems="$(HasSharedItems)" MSBuildProjectDirectory="$(MSBuildProjectDirectory)" ProjectName="$(ProjectName)" Platform="$(Platform)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Filtered" ItemName="DeDupedAppxUploadPackagePayload" />
+    </WinAppSdkRemovePayloadDuplicates>
+
+    <!-- If packaging outputs contain a file named AppxManifest.xml, this is an override manifest and it is handled elsewhere.
+        If packaging outputs contain the store association file, we need to remove it. Furthermore,
+        we need to remove the SourceAppxContentGroupMap file, or if producing an Appx Bundle, the AppxContentGroupMap as well.
+        Except for builds using PackageLayout - in that case, we leave the AppxContentGroupMap in. -->
+    <ItemGroup>
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == '$(AppxManifestFileName)'" />
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == 'Package.StoreAssociation.xml'" />
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == 'SourceAppxContentGroupMap.xml'" />
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'$(UseAppxLayout)' != 'true' AND '$(ProduceAppxBundle)' == 'true' AND '%(AppxPackagePayload.TargetPath)' == 'AppxContentGroupMap.xml'" />
+
+      <!-- If we're flat bundling, remove any assets that will be placed in the dedicated asset package. -->
+      <AppxPackagePayload Remove="@(_AppxLayoutAssetPackageFiles)" Condition="'$(UseAppxLayout)' == 'true'" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(BuildAppxUploadPackageForUap)' == 'true'">
+      <DeDupedAppxUploadPackagePayload Remove="@(DeDupedAppxUploadPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == '$(AppxManifestFileName)'" />
+    </ItemGroup>
+
+    <!-- If we are NOT going through the .Net Native toolchain, this generated payload becomes the payload we'll package for upload -->
+    <ItemGroup Condition="'$(UseDotNetNativeToolchain)' != 'true' and '$(BuildAppxUploadPackageForUap)' == 'true'">
+      <AppxUploadPackagePayload Include="@(DeDupedAppxUploadPackagePayload)" />
+    </ItemGroup>
+
+    <!-- If the Upload packaging outputs contain the store association file, the SourceAppxContentGroupMap file,
+         or if producing an Appx Bundle, the AppxContentGroupMap, we need to remove it
+         Except for builds using PackageLayout - in that case, we leave the AppxContentGroupMap in. -->
+    <ItemGroup>
+      <AppxUploadPackagePayload Remove="@(AppxUploadPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == 'Package.StoreAssociation.xml'" />
+      <AppxUploadPackagePayload Remove="@(AppxUploadPackagePayload)" Condition="'%(AppxPackagePayload.TargetPath)' == 'SourceAppxContentGroupMap.xml'" />
+      <AppxUploadPackagePayload Remove="@(AppxUploadPackagePayload)" Condition="'$(UseAppxLayout)' != 'true' AND '$(ProduceAppxBundle)' == 'true' AND '%(AppxPackagePayload.TargetPath)' == 'AppxContentGroupMap.xml'" />
+
+      <!-- If we're flat bundling, remove any assets that will be placed in the dedicated asset package. -->
+      <AppxUploadPackagePayload Remove="@(_AppxLayoutAssetPackageFiles)" Condition="'$(UseAppxLayout)' == 'true'" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ProjectArchitectureFromPayload Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.OutputGroup)' == '_GetProjectArchitecture' AND '%(PackagingOutputs.MSBuildSourceProjectFile)' != ''" />
+      <_ProjectArchitectureFromPayload Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.OutputGroup)' == '_GetProjectArchitecture' AND '%(PackagingOutputs.MSBuildSourceProjectFile)' == ''">
+        <MSBuildSourceProjectFile>$(MSBuildProjectFullPath)</MSBuildSourceProjectFile>
+      </_ProjectArchitectureFromPayload>
+    </ItemGroup>
+
+    <WinAppSdkGenerateProjectArchitecturesFile ProjectArchitectures="@(_ProjectArchitectureFromPayload)" ProjectArchitecturesFilePath="$(_ProjectArchitecturesFilePath)" VsTelemetrySession="$(VsTelemetrySession)"/>
+
+    <ItemGroup>
+      <FileWrites Include="$(_ProjectArchitecturesFilePath)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- Override to specify actions to happen before generating Appx manifest. -->
+  <Target Name="BeforeGenerateAppxPackageRecipe"/>
+
+  <!-- Creates the recipe file for the the appx package -->
+  <Target Name="_CalculateInputsForGenerateAppxPackageRecipe">
+    <ItemGroup>
+      <_GenerateAppxPackageRecipeInput Include="@(FinalAppxManifest)" />
+      <_GenerateAppxPackageRecipeInput Include="@(AppxPackagePayload)" />
+      <_GenerateAppxPackageRecipeInput Include="$(_ProjectArchitecturesFilePath)" />
+      <_GenerateAppxPackageRecipeInput Include="$(MSBuildProjectFullPath).user" Condition="Exists('$(MSBuildProjectFullPath).user')" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PDBPayload Include="@(AppxPackagePayload)" Condition="'%(Extension)'=='.pdb'" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(AppxPackageIncludePrivateSymbols)' != 'true'">
+      <AppxPackagePayload Remove="@(AppxPackagePayload)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateAppxPackageRecipe" DependsOnTargets="$(_GenerateAppxPackageRecipeDependsOn)"/>
+
+  <!-- Creates the recipe file for the the appx package -->
+  <Target Name="_GenerateAppxPackageRecipeFile" Inputs="$(MSBuildAllProjects);@(_GenerateAppxPackageRecipeInput)" Outputs="$(AppxPackageRecipe)">
+    <!-- Set the RecipeContentGroupMap if the AppxContentGroupMap file is not already included in the payload. This happens when ProduceAppxBundle is not true. -->
+    <PropertyGroup>
+      <RecipeContentGroupMap Condition="'$(ProduceAppxBundle)' == 'true'">$(AppxContentGroupMapFullPath)</RecipeContentGroupMap>
+    </PropertyGroup>
+
+    <WinAppSdkGenerateAppxPackageRecipe
+        AppxContentGroupMap="$(RecipeContentGroupMap)"
+        AppxManifestXml="%(FinalAppxManifest.FullPath)"
+        AppxBundleManifestXml="$(FinalAppxBundleManifestName)"
+        SourceAppxManifest="@(SourceAppxManifest)"
+        SolutionConfiguration="$(Configuration)|$(Platform)"
+        PayloadFiles="@(AppxPackagePayload)"
+        FrameworkSdkPackages="@(FrameworkSdkPackage)"
+        RecipeFile="$(AppxPackageRecipe)"
+        SystemBinaries="@(AppxSystemBinary)"
+        ReservedFileNames="@(AppxReservedFileName)"
+        AppxManifestSchemas="@(AppxManifestSchema)"
+        ManifestFileNameQueries="@(AppxManifestFileNameQuery)"
+        ManifestImageFileNameQueries="@(AppxManifestImageFileNameQuery)"
+        AdditionalReRegisterAppIfChangedTargetPaths="@(AdditionalReRegisterAppIfChangedTargetPaths)"
+        PackageArchitecture="$(PackageArchitecture)"
+        ProjectDir="$(ProjectDir)"
+        IntermediateOutputPath="$(IntermediateOutputPath)"
+        TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+        TargetPlatformVersion="$(TargetPlatformVersion)"
+        PlatformVersionDescriptions="@(PlatformVersionDescription)"
+        IndexedPayloadFiles="@(IndexedPayloadFiles)"
+        MrmSupportLibraryPath="$(MrmSupportLibraryPath)"
+        UseResourceIndexerApi="$(AppxUseResourceIndexerApi)"
+        DisableAppxManifestItemPackageContentValidation="$(DisableAppxManifestItemPackageContentValidation)"
+        RemoteDeploymentType="$(RemoteDeploymentType)"
+        PackageRegistrationPath="$(PackageRegistrationPath)"
+        RemoveNonLayoutFiles="$(RemoveNonLayoutFiles)"
+        WindowsSdkPath="$(WindowsSdkPath)"
+        LayoutDir="$(LayoutDir)"
+        OptionalProjectRecipeFiles="@(BundleMappingRecipes)"
+        DeployOptionalPackages="$(DeployOptionalPackages)"
+        VsTelemetrySession="$(VsTelemetrySession)"
+        />
+
+    <ItemGroup>
+      <AllGeneratedRecipes Include="$(AppxPackageRecipe)" />
+    </ItemGroup>
+
+    <Message Importance="low" Text="Manifest: %(FinalAppxManifest.Identity)" />
+    <Message Importance="low" Text="Payload: %(AppxPackagePayload.TargetPath) from %(AppxPackagePayload.FullPath)" />
+    <Message Importance="low" Text="SDK reference: %(RecursiveResolvedSDKReference.TargetPath) from %(RecursiveResolvedSDKReference.FullPath)" />
+    <Message Importance="low" Text="$(MSBuildProjectName) -> $(AppxPackageRecipe)" />
+  </Target>
+
+  <Target Name="_GetPackageArchitecture">
+    <WinAppSdkGetPackageArchitecture Platform="$(Platform)" ProjectArchitecture="@(ProjectArchitecture)" RecursiveProjectArchitecture="@(_RecursiveProjectArchitecture)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="PackageArchitecture" PropertyName="PackageArchitecture" />
+    </WinAppSdkGetPackageArchitecture>
+  </Target>
+
+  <Target Name="_GetPackageProperties" DependsOnTargets="$(_GetPackagePropertiesDependsOn)" />
+
+  <Target Name="_GetRecursiveProjectArchitecture">
+    <ItemGroup>
+      <_RecursiveProjectArchitecture Include="@(PackagingOutputs)" Condition="'%(PackagingOutputs.OutputGroup)' == '_GetProjectArchitecture'" />
+      <_RecursiveProjectArchitecture Remove="@(_RecursiveProjectArchitecture)" Condition="'%(PackagingOutputs.ProjectName)' == '$(ProjectName)'" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GetPackageArchitecture">
+    <WinAppSdkGetPackageArchitecture Platform="$(Platform)" ProjectArchitecture="@(ProjectArchitecture)" RecursiveProjectArchitecture="@(_RecursiveProjectArchitecture)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="PackageArchitecture" PropertyName="PackageArchitecture" />
+    </WinAppSdkGetPackageArchitecture>
+  </Target>
+
+  <Target Name="_CalculateAppxBundleProperties" Condition="'$(AppxBundle)' != 'Never'">
+
+    <PropertyGroup>
+      <AppxBundlePlatforms Condition="'$(AppxBundlePlatforms)' == ''">$(PackageArchitecture)</AppxBundlePlatforms>
+    </PropertyGroup>
+
+    <WinAppSdkGetAppxBundlePlatforms Input="$(AppxBundlePlatforms)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Platforms" ItemName="AppxBundlePlatform" />
+      <Output TaskParameter="Last" PropertyName="AppxBundleLastPlatform" />
+    </WinAppSdkGetAppxBundlePlatforms>
+
+    <ItemGroup>
+      <AppxBundlePlatformWithAnyCPU Condition="'%(Identity)' == 'neutral'" Include="@(AppxBundlePlatform -> 'AnyCPU')" />
+      <AppxBundlePlatformWithAnyCPU Condition="'%(Identity)' != 'neutral'" Include="@(AppxBundlePlatform)" />
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_AppxBundlePlatformsForNamingIntermediate>@(AppxBundlePlatformWithAnyCPU)</_AppxBundlePlatformsForNamingIntermediate>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <AppxBundlePlatformsForNaming>$(_AppxBundlePlatformsForNamingIntermediate.Replace(';','_'))</AppxBundlePlatformsForNaming>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <AppxBundleProducingPlatform Condition="'$(AppxBundleProducingPlatform)' == ''">$(AppxBundleLastPlatform)</AppxBundleProducingPlatform>
+      <AppxBundleResourcePacksProducingPlatform Condition="'$(AppxBundleResourcePacksProducingPlatform)' == ''">$(AppxBundleLastPlatform)</AppxBundleResourcePacksProducingPlatform>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <AppxBundlePlatformSpecificArtifactsListPath>$(PlatformSpecificBundleArtifactsListDir)$(PackageArchitecture).txt</AppxBundlePlatformSpecificArtifactsListPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(BuildAppxUploadPackageForUap)' == 'true'">
+      <AppxBundlePlatformSpecificUploadArtifactsListPath>$(PlatformSpecificUploadBundleArtifactsListDir)$(PackageArchitecture).txt</AppxBundlePlatformSpecificUploadArtifactsListPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxBundle)'==''">
+      <AppxBundle Condition="$(AppxBundlePlatforms.Contains('|'))">Always</AppxBundle>
+      <AppxBundle Condition="'$(AppxBundle)'==''">Auto</AppxBundle>
+    </PropertyGroup>
+  </Target>
+
+  <!-- BEGIN APPINSTALLER PREPARATION -->
+
+  <PropertyGroup>
+    <AppInstallerDependsOn>
+      GenerateAppInstallerFileForPackage;
+      CreateAppInstallerPublishMeta;
+      GeneratePublishHtmlForAppInstaller
+    </AppInstallerDependsOn>
+  </PropertyGroup>
+
+  <Target Name="GenerateAppInstallerForBundle" Condition="'$(GenerateAppInstallerFile)' == 'true' AND '$(ProduceAppxBundle)' == 'true'" DependsOnTargets="$(AppInstallerDependsOn)" />
+  <Target Name="GenerateAppInstallerForPackage" Condition="'$(GenerateAppInstallerFile)' == 'true' AND '$(ProduceAppxBundle)' == 'false'" DependsOnTargets="$(AppInstallerDependsOn)" />
+
+  <Target Name="GeneratePublishHtmlForAppInstaller" DependsOnTargets="CreateAppInstallerPublishMeta">
+
+    <PropertyGroup>
+      <PublishLogoPath Condition="'$(PublishLogoPath)' == ''">%(AppInstallerPublishMeta.LogoPath)</PublishLogoPath>
+    </PropertyGroup>
+
+    <WinAppSdkGenerateLandingPage
+       OutputFolder="%(AppInstallerPublishMeta.OutputFolder)"
+       AppName="%(AppInstallerPublishMeta.AppName)"
+       AppDescription="%(AppInstallerPublishMeta.AppDescription)"
+       Version="%(AppInstallerPublishMeta.Version)"
+       RequiredOS="%(AppInstallerPublishMeta.RequiredOS)"
+       PublisherName="%(AppInstallerPublishMeta.PublisherName)"
+       SupportedArchitectures="%(AppInstallerPublishMeta.SupportedArchitectures)"
+       AdditionalLinksMap="%(AppInstallerPublishMeta.AdditionalLinks)"
+       TileColor="%(AppInstallerPublishMeta.TileColor)"
+       ButtonMap="%(AppInstallerPublishMeta.ButtonMap)"
+       ImageFile="$(PublishLogoPath)"
+       ResourceRoot="$(MSBuildThisFileDirectory)Landing"
+       VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="LandingPagePath" PropertyName="LandingPagePath" />
+
+    </WinAppSdkGenerateLandingPage>
+
+    <ItemGroup>
+      <InstallerFileWrites Include="$(LandingPagePath)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CreateAppInstallerPublishMeta">
+    <WinAppSdkCreateAppInstallerPublishMeta
+      AppInstallerMetaSearchDirectory="$(PlatformSpecificBundleArtifactsListDirInProjectDir)"
+      IsBundle="$(ProduceAppxBundle)"
+      AppVersion="$(AppInstallerVersion)"
+      VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="AppInstallerPublishMeta" ItemName="AppInstallerPublishMeta" />
+    </WinAppSdkCreateAppInstallerPublishMeta>
+  </Target>
+
+  <Target Name="_FindAppInstallerTemplateFile">
+
+    <ItemGroup Condition="'@(AppInstallerTemplateFile)' == ''">
+      <AppInstallerTemplateFile Include="@(Content)" Condition="'%(Identity)' == '$(AppInstallerTemplateFileName)'" />
+      <AppInstallerTemplateFile Include="@(None)" Condition="'%(Identity)' == '$(AppInstallerTemplateFileName)' and '$(AppInstallerTemplateFile)' == ''" />
+      <None Remove="@(None)" Condition="'%(Identity)' == '$(AppInstallerTemplateFileName)'" />
+    </ItemGroup>
+
+  </Target>
+
+  <PropertyGroup>
+    <_GenerateAppInstallerFileForPackageDependsOn>
+      $(_GenerateAppInstallerFileForPackageDependsOn);
+      _FindAppInstallerTemplateFile
+    </_GenerateAppInstallerFileForPackageDependsOn>
+
+    <_GenerateAppInstallerFileForPackageDependsOn Condition="'$(AppxPackagingComponentManifestPath)'==''">
+      $(_GenerateAppInstallerFileForPackageDependsOn);
+      _GetAppxPackagingComponentManifestPath
+    </_GenerateAppInstallerFileForPackageDependsOn>
+  </PropertyGroup>
+
+  <Target Name="GenerateAppInstallerFileForPackage"
+          DependsOnTargets="$(_GenerateAppInstallerFileForPackageDependsOn)">
+
+    <PropertyGroup>
+      <AppInstallerPackageOutputFile>$(AppxPackageOutput)</AppInstallerPackageOutputFile>
+      <AppInstallerPackageOutputFile Condition="'$(ProduceAppxBundle)' == 'true'">$(AppxBundleOutput)</AppInstallerPackageOutputFile>
+    </PropertyGroup>
+
+    <WinAppSdkGenerateAppInstallerFile
+      AppInstallerTemplateFile="@(AppInstallerTemplateFile)"
+      FinalAppxManifestFile="$(FinalAppxManifestName)"
+      HoursBetweenUpdateChecks ="$(HoursBetweenUpdateChecks)"
+      AppInstallerCheckForUpdateFrequency="$(AppInstallerCheckForUpdateFrequency)"
+      AppInstallerUpdateFrequency="$(AppInstallerUpdateFrequency)"
+      AppInstallerUri="$(AppInstallerUri)"
+      BundleArtifactsDir="$(PlatformSpecificBundleArtifactsListDirInProjectDir)"
+      ProjectFileDir="$(MSBuildProjectDirectory)"
+      AppxBundlePlatforms="$(AppxBundlePlatforms)"
+      ProjectName="$(ProjectName)"
+      ProduceAppxBundle="$(ProduceAppxBundle)"
+      FrameworkSdkPackages="@(FrameworkSdkPackage)"
+      AppxPackageDir="$(AppxPackageDir)"
+      AppxUri="$(AppInstallerPackageOutputFile)"
+      AppxPackagingComponentManifestPath="$(AppxPackagingComponentManifestPath)"
+      ResourceRoot="$(MSBuildThisFileDirectory)Templates"
+      VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="AppInstallerFileWrites" ItemName="AppInstallerFileWrites" />
+      <Output TaskParameter="AppInstallerFilePath" ItemName="AppInstallerFilePath" />
+      <Output TaskParameter="AppInstallerVersion" PropertyName="AppInstallerVersion" />
+    </WinAppSdkGenerateAppInstallerFile>
+
+    <ItemGroup>
+      <FileWrites Include="@(AppInstallerFileWrites)" />
+      <InstallerFileWrites Include="@(AppInstallerFilePath)" />
+    </ItemGroup>
+  </Target>
+
+  <!-- END APPINSTALLER PREPARATION -->
+
+  <Import Project="$(MSBuildThisFileDirectory)\Microsoft.Build.Msix.Pri.targets"/>
+
+</Project>

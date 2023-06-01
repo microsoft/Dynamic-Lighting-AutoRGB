@@ -1,0 +1,14 @@
+﻿<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <_MuxWinmdDir>$(MSBuildThisFileDirectory)..\..\lib\uap10.0\</_MuxWinmdDir>
+    <_AddWinUIAssembliesToReferenceCopyLocalPaths>true</_AddWinUIAssembliesToReferenceCopyLocalPaths>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="$(_MuxWinmdDir)*.winmd">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project ToolVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Ixp-Platform Condition="'$(Platform)' == 'AnyCPU'">win10-x64</Ixp-Platform>    <!-- temp change so I can use the amd64 package with C# -->
+    <Ixp-Platform Condition="'$(Platform)' == 'Win32'" >win10-x86</Ixp-Platform>
+    <Ixp-Platform Condition="'$(Platform)' != 'AnyCPU' AND '$(Platform)' != 'Win32'">win10-$(Platform)</Ixp-Platform>
+  </PropertyGroup>
+
+  <!-- Set the UAP metadata to reference based on the target version -->
+  <PropertyGroup>
+    <Ixp-UAPTargetVersion Condition="'$(TargetPlatformVersion)' &lt; '10.0.18362.0'">uap10.0.17763</Ixp-UAPTargetVersion>
+    <Ixp-UAPTargetVersion Condition="'$(Ixp-UAPTargetVersion)' == ''">uap10.0.18362</Ixp-UAPTargetVersion>
+  </PropertyGroup>
+  
+  <ItemGroup
+    Condition="'$(Ixp-SelfContained)' == 'true' AND Exists('$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\')">
+    <!-- Architecture-specific product DLLs are in "runtimes\...\native" -->
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\CoreMessagingXP.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\dcompi.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\dwmcorei.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\dwmscenei.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\marshal.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.DirectManipulation.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.Graphics.Display.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.InputStateManager.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.Internal.FrameworkUdk.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.UI.Composition.OSSupport.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.UI.Input.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.UI.Windowing.Core.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\Microsoft.UI.Windowing.dll" />
+    <ReferenceCopyLocalPaths Include="$(MSBuildThisFileDirectory)..\runtimes\$(Ixp-Platform)\native\wuceffectsi.dll" />
+  </ItemGroup>
+
+  <ItemGroup
+    Condition="'$(Ixp-SelfContained)' == 'true' AND Exists('$(MSBuildThisFileDirectory)..\manifests\')">
+    <!-- Manifest files used for unpackaged Win32 apps are in "manifests" -->
+    <Manifest Include="$(MSBuildThisFileDirectory)..\manifests\Microsoft.InteractiveExperiences.manifest" />
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)Microsoft.InteractiveExperiences.Capabilities.targets" />
+</Project>

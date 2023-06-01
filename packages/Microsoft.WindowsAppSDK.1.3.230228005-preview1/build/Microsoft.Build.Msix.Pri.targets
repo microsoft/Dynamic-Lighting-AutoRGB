@@ -1,0 +1,634 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="15.0">
+  <PropertyGroup>
+    <!-- Continue to honor the UapDefaultAssetScale property for compat reasons.  But going forward advertise the property "AppxDefaultResourceQualifierUAP_{ValueName} as the desired override property. -->
+    <UapDefaultAssetScale Condition="'$(UapDefaultAssetScale)' == ''">200</UapDefaultAssetScale>
+    <AppxDefaultResourceQualifierUAP_Scale Condition="'$(AppxDefaultResourceQualifierUAP_Scale)' == ''">$(UapDefaultAssetScale)</AppxDefaultResourceQualifierUAP_Scale>
+
+    <AppxDefaultResourceQualifierUAP_Language Condition="'$(AppxDefaultResourceQualifierUAP_Language)' == ''">{DefaultResourceLanguage}</AppxDefaultResourceQualifierUAP_Language>
+    <AppxDefaultResourceQualifierUAP_Contrast Condition="'$(AppxDefaultResourceQualifierUAP_Contrast)' == ''">standard</AppxDefaultResourceQualifierUAP_Contrast>
+    <AppxDefaultResourceQualifierUAP_HomeRegion Condition="'$(AppxDefaultResourceQualifierUAP_HomeRegion)' == ''">001</AppxDefaultResourceQualifierUAP_HomeRegion>
+    <AppxDefaultResourceQualifierUAP_TargetSize Condition="'$(AppxDefaultResourceQualifierUAP_TargetSize)' == ''">256</AppxDefaultResourceQualifierUAP_TargetSize>
+    <AppxDefaultResourceQualifierUAP_LayoutDirection Condition="'$(AppxDefaultResourceQualifierUAP_LayoutDirection)' == ''">LTR</AppxDefaultResourceQualifierUAP_LayoutDirection>
+    <AppxDefaultResourceQualifierUAP_DxFeatureLevel Condition="'$(AppxDefaultResourceQualifierUAP_DxFeatureLevel)' == ''">DX9</AppxDefaultResourceQualifierUAP_DxFeatureLevel>
+    <AppxDefaultResourceQualifierUAP_Platform Condition="'$(AppxDefaultResourceQualifierUAP_Platform)' == ''">UAP</AppxDefaultResourceQualifierUAP_Platform>
+
+    <DisableAppxManifestItemPackageContentValidation Condition="'$(DisableAppxManifestItemPackageContentValidation)' == ''">false</DisableAppxManifestItemPackageContentValidation>
+    <RemoveNonLayoutFiles Condition="'$(RemoveNonLayoutFiles)' == ''">true</RemoveNonLayoutFiles>
+    <IncludeLayoutFilesInPackage Condition="'$(IncludeLayoutFilesInPackage)' == ''">false</IncludeLayoutFilesInPackage>
+    <AppxSubfolderWithFilesToBeEmbedded Condition="'$(AppxSubfolderWithFilesToBeEmbedded)' == ''">embed</AppxSubfolderWithFilesToBeEmbedded>
+
+    <AppxExcludeXamlFromLibraryLayoutsWhenXbfIsPresent Condition="'$(AppxExcludeXamlFromLibraryLayoutsWhenXbfIsPresent)' != 'false'">true</AppxExcludeXamlFromLibraryLayoutsWhenXbfIsPresent>
+    <AppxDefaultResourceQualifiers_UAP>Language=$(AppxDefaultResourceQualifierUAP_Language)|Contrast=$(AppxDefaultResourceQualifierUAP_Contrast)|Scale=$(AppxDefaultResourceQualifierUAP_Scale)|HomeRegion=$(AppxDefaultResourceQualifierUAP_HomeRegion)|TargetSize=$(AppxDefaultResourceQualifierUAP_TargetSize)|LayoutDirection=$(AppxDefaultResourceQualifierUAP_LayoutDirection)|DXFeatureLevel=$(AppxDefaultResourceQualifierUAP_DxFeatureLevel)|Configuration=$(AppxDefaultResourceQualifierUAP_Configuration)|AlternateForm=$(AppxDefaultResourceQualifierUAP_AlternateForm)|Platform=$(AppxDefaultResourceQualifierUAP_Platform)</AppxDefaultResourceQualifiers_UAP>
+    <EnableDefaultPriItems Condition="'$(EnableDefaultPriItems)'==''">true</EnableDefaultPriItems>
+
+    <GenerateLibraryLayout Condition="'$(GenerateLibraryLayout)' == '' AND ('$(OutputType)' != 'AppContainerExe' AND '$(OutputType)' != 'Exe' AND '$(OutputType)' != 'WinExe')">true</GenerateLibraryLayout>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(AppxDefaultResourceQualifiers)' == ''">
+    <AppxDefaultResourceQualifiers Condition="'$(SDKIdentifier)' != ''">$(AppxDefaultResourceQualifiers_UAP)</AppxDefaultResourceQualifiers>
+  </PropertyGroup>
+
+  <!-- Pri Tasks -->
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkCreatePriConfigXmlForFullIndex" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkExpandPriContent" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkGenerateProjectPriFile" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkGeneratePriConfigurationFiles" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkGetDefaultResourceLanguage" />
+  <UsingTask AssemblyFile="$(MsixTaskAssembly)" TaskName="$(MsixTaskAssemblyNamespace).Pri.WinAppSdkRemoveDuplicatePriFiles" />
+
+  <PropertyGroup>
+    <GenerateProjectPriFileDependsOn>
+      $(GenerateProjectPriFileDependsOn);
+      CopyFilesToOutputDirectory;
+      BeforeGenerateProjectPriFile;
+    </GenerateProjectPriFileDependsOn>
+
+    <GenerateProjectPriFileDependsOn Condition="'$(MakePriExeFullPath)'==''">
+      $(GenerateProjectPriFileDependsOn);
+      _GetMakePriToolPath
+    </GenerateProjectPriFileDependsOn>
+
+    <GenerateProjectPriFileDependsOn Condition="'$(MrmSupportLibraryPath)'==''">
+      $(GenerateProjectPriFileDependsOn);
+      _GetMrmSupportLibraryPath
+    </GenerateProjectPriFileDependsOn>
+
+    <GenerateProjectPriFileDependsOn>
+      $(GenerateProjectPriFileDependsOn);
+      GetPriOutputs;
+      _GetPriFilesFromPayload;
+      _ComputeInputPriFiles;
+      _GenerateProjectPriConfigurationFiles;
+      _GenerateProjectPriFileCore;
+      _AddFileReadsAndFileWritesForProjectPri;
+      _CalculateUseResourceIndexerApi;
+      _ExpandProjectPriFile;
+      AfterGenerateProjectPriFile
+    </GenerateProjectPriFileDependsOn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PrepareMsixPackageDependsOn>
+      GenerateProjectPriFile;
+      $(PrepareMsixPackageDependsOn);
+    </PrepareMsixPackageDependsOn>
+  </PropertyGroup>
+
+  <!--
+    Calculate whether or not Pri generation is enabled for this project. We don't want to
+    run this tooling if there is no reason, because even if nothing needs to be done, it's
+    expensive to run the GetPriOutputs targets. This behavior can always be overriden by
+    specifying the AppxGeneratePriEnabled property in the project file itself.
+
+    We only enable Pri generation for two basic scenarios:
+       1. This project has WinUI related items - we don't just filter on Page, because WPF
+          projects use Page as well, but are unlikely to need Pri tooling
+       2. If there are explicit PriResource items
+       3. WindowsPackageType is set to MSIX, which require a resources.pri
+          for store and start menu related assets
+
+    While there are other ItemGroups that *can* make it into the PRI (i.e. Content), it's
+    unlikely that projects that have basic Content items are using the MRT APIs if they aren't
+    WinAppSdk projects.
+  -->
+  <Target Name="CalculateAppxGenerateProjectPriEnabled"
+          BeforeTargets="GenerateProjectPriFile;GetPriOutputs;GetPriIndexName"
+          DependsOnTargets="_ValidatePresenceOfAppxManifestItems"
+          Returns="$(AppxGeneratePriEnabled)">
+    <ItemGroup>
+      <_XamlItemsFiltered Include="@(Page)" Condition="'%(Page.XamlRuntime)'!='Wpf'"/>
+      <_XamlItemsFiltered Include="@(ApplicationDefinition)" Condition="'%(ApplicationDefinition.XamlRuntime)'!='Wpf'"/>
+    </ItemGroup>
+    <PropertyGroup Condition="'$(AppxGeneratePriEnabled)' == ''">
+      <AppxGeneratePriEnabled Condition="'@(_XamlItemsFiltered)' != ''">true</AppxGeneratePriEnabled>
+      <AppxGeneratePriEnabled Condition="'@(PriResource)' != ''">true</AppxGeneratePriEnabled>
+      <AppxGeneratePriEnabled Condition="'$(WindowsPackageType)' == 'MSIX'">true</AppxGeneratePriEnabled>
+      <AppxGeneratePriEnabled Condition="'$(AppxGeneratePriEnabled)'==''">false</AppxGeneratePriEnabled>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxGeneratePriEnabled)'=='true'">
+      <!-- Pre 19041 versions of Windows require the PriIndexName to match the package identity -->
+      <ProjectPriIndexName Condition="'$(ProjectPriIndexName)' == '' and '$(AppxManifestIdentityName)'!=''">$(AppxManifestIdentityName)</ProjectPriIndexName>
+      <ProjectPriIndexName Condition="'$(ProjectPriIndexName)' == ''">$(TargetName)</ProjectPriIndexName>
+      <AppxPriInitialPath Condition="'$(AppxPrependPriInitialPath)' == 'true' and '$(AppxPriInitialPath)' == ''">$(TargetName)</AppxPriInitialPath>
+      <PriInitialPath>$(AppxPriInitialPath)</PriInitialPath>
+      <ProjectPriFileName Condition="'$(_GenMainResourcePri)' == 'true' and '$(ProjectPriFileName)' == ''">resources.pri</ProjectPriFileName>
+      <ProjectPriFileName Condition="'$(ProjectPriFileName)' == ''">$(ProjectPriIndexName).pri</ProjectPriFileName>
+      <ProjectPriFullPath Condition="'$(ProjectPriFullPath)' == ''">$(TargetDir)$(AppxPackageArtifactsDir)$(ProjectPriFileName)</ProjectPriFullPath>
+    </PropertyGroup>
+  </Target>
+
+  <PropertyGroup>
+    <PrepareForRunDependsOn>
+      GenerateProjectPriFile;
+      $(PrepareForRunDependsOn);
+    </PrepareForRunDependsOn>
+  </PropertyGroup>
+
+  <Target Name="GenerateProjectPriFile"
+        Condition="'$(AppxGeneratePriEnabled)' == 'true'"
+        AfterTargets="CopyFilesToOutputDirectory"
+        DependsOnTargets="$(GenerateProjectPriFileDependsOn)" />
+
+  <Target Name="BeforeGenerateProjectPriFile" />
+
+  <Target Name="AfterGenerateProjectPriFile" />
+
+  <PropertyGroup>
+    <AppxBundleAutoResourcePackageQualifiers Condition="'$(AppxBundleAutoResourcePackageQualifiers)' == ''">Language|Scale|DXFeatureLevel</AppxBundleAutoResourcePackageQualifiers>
+    <!--
+      The file name, resources.pri, is a well-known file name that the Windows OS understands in order to display UWP
+      assets such as the splash screen, start logo, etc. The default behavior then, is that application projects
+      produce this file. For these project types, the "PRI initial path" defaults to empty. This simplifies the
+      resource lookup logic by omitting text, and it's guaranteed that there won't be resource collisions.
+      This means that URI's can be constructed like this:
+         System.Uri = new System.Uri("ms-resource:///App.xaml");
+
+      This isn't the case for library projects, which could from any source, and need to be unaware of the resources
+      that other 3rd party libraries contain. For these scenarios, we give them an initial path, which defaults to
+      the name of the assembly. What this means in practice is that URI's will be constructed like this:
+         System.Uri = new System.Uri("ms-resource:///Library/UserControl.xaml");
+
+      Where "Library" is the value of the initial path. We default this to the TargetName of the project, which
+      is the name of the resulting assembly, so that name of the assembly, nuget package, and pri file all match.
+
+      Every project has a "Pri Index", which is used to index the resources in the pri file. The index and
+      path don't have to be the same (as is the default case for applications), but for simplicity, the
+      default behavior is to have them be the same. The index is only used for tooling purposes, and generally
+      isn't exposed to the end developer in any way.
+
+      For the experienced and more advanced use cases, this default behavior can be customized:
+
+      1. If the project isn't an app, but would like to be used for packaging other apps (i.e. multi-exe packages),
+         then add this to the project file:
+      <PropertyGroup>
+        <AppxPackage>true</AppxPackage>
+      </PropertyGroup>
+      2. To alter the index name, set the ProjectPriIndexName property:
+      <PropertyGroup>
+        <ProjectPriIndexName>MyCustomIndex</ProjectPriIndexName>
+      </PropertyGroup>
+      3. To alter the inital path, set the AppxPriInitialPath property:
+      <PropertyGroup>
+        <AppxPriInitialPath>MyCustomInitialPath</AppxPriInitialPath>
+      </PropertyGroup>
+    -->
+    <_GenMainResourcePri Condition="'$(AppxPackage)' == 'true' or '$(OutputType)'== 'WinExe' or '$(OutputType)' == 'Exe'">true</_GenMainResourcePri>
+    <_GenMainResourcePri Condition="'$(_GenMainResourcePri)' == ''">false</_GenMainResourcePri>
+    <AppxPrependPriInitialPath Condition="'$(AppxPrependPriInitialPath)' == '' and '$(_GenMainResourcePri)'=='true'">false</AppxPrependPriInitialPath>
+    <AppxPrependPriInitialPath Condition="'$(AppxPrependPriInitialPath)' == ''">true</AppxPrependPriInitialPath>
+
+    <TargetPlatformResourceVersion Condition="'$(TargetPlatformResourceVersion)' == ''">$(TargetPlatformMinVersion)</TargetPlatformResourceVersion>
+    <_SupportEmbedFileResources Condition="'$(_SupportEmbedFileResources)' ==''">true</_SupportEmbedFileResources>
+    <_PriConfigXmlPath>$(IntermediateOutputPath)priconfig.xml</_PriConfigXmlPath>
+    <_UnfilteredLayoutResfilesPath>$(IntermediateOutputPath)unfiltered.layout.resfiles</_UnfilteredLayoutResfilesPath>
+    <_FilteredLayoutResfilesPath>$(IntermediateOutputPath)filtered.layout.resfiles</_FilteredLayoutResfilesPath>
+    <_ExcludedLayoutResfilesPath>$(IntermediateOutputPath)excluded.layout.resfiles</_ExcludedLayoutResfilesPath>
+    <_ResourcesResfilesPath>$(IntermediateOutputPath)resources.resfiles</_ResourcesResfilesPath>
+    <_PriResfilesPath>$(IntermediateOutputPath)pri.resfiles</_PriResfilesPath>
+    <_EmbedFileResfilePath Condition="'$(_SupportEmbedFileResources)' == 'true'">$(IntermediateOutputPath)$(AppxSubfolderWithFilesToBeEmbedded)\embed.resfiles</_EmbedFileResfilePath>
+    <_QualifiersPath>$(IntermediateOutputPath)qualifiers.txt</_QualifiersPath>
+    <_MultipleQualifiersPerDimensionFoundPath>$(IntermediateOutputPath)MultipleQualifiersPerDimensionFound.txt</_MultipleQualifiersPerDimensionFoundPath>
+  </PropertyGroup>
+
+  <Target Name="_GetPriFilesFromPayload" Returns="@(_PriFilesFromPayload)">
+    <ItemGroup>
+      <_PriFilesFromPayloadRaw Include="@(PriOutputs)" Condition="'%(Extension)' == '.pri' and '%(PriOutputs.ProjectName)' != '$(ProjectName)'" />
+      <_PriFilesFromPayloadRaw Include="@(PriOutputs)" Condition="'%(Extension)' == '.pri' and '%(PriOutputs.ProjectName)' == '$(ProjectName)' and '%(PriOutputs.OutputGroup)' != 'ProjectPriFile'" />
+    </ItemGroup>
+
+    <WinAppSdkRemoveDuplicatePriFiles Inputs="@(_PriFilesFromPayloadRaw)" Platform="$(Platform)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Filtered" ItemName="_PriFilesFromPayload" />
+    </WinAppSdkRemoveDuplicatePriFiles>
+  </Target>
+
+  <Target Name="_ComputeInputPriFiles" >
+    <ItemGroup>
+      <_PriFile Include="@(_PriFilesFromPayload)" />
+      <_PriFile Include="@(_PortableLibraryCreatedPriFiles)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GetDefaultResourceLanguage">
+    <WinAppSdkGetDefaultResourceLanguage DefaultLanguage="$(DefaultLanguage)" SourceAppxManifest="@(SourceAppxManifest)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="DefaultResourceLanguage" PropertyName="DefaultResourceLanguage" />
+    </WinAppSdkGetDefaultResourceLanguage>
+  </Target>
+
+  <Target Name="_GenerateProjectPriConfigurationFiles"
+          Inputs="$(MSBuildAllProjects);@(_PriFile);$(AppxPriConfigXmlDefaultSnippetPath);@(PriOutputs)"
+          Outputs="$(_PriConfigXmlPath);$(_UnfilteredLayoutResfilesPath);$(_FilteredLayoutResfilesPath);$(_ExcludedLayoutResfilesPath);$(_ResourcesResfilesPath);$(_PriResfilesPath)"
+          DependsOnTargets="_GetDefaultResourceLanguage;_CopyOutOfDateSourceItemsToOutputDirectory">
+    <ItemGroup>
+      <_LayoutFileSource Include="@(PriOutputs)" Condition="'%(PriOutputs.OutputGroup)' == 'ContentFilesProjectOutputGroup' and '%(PriOutputs.ProjectName)' == '$(ProjectName)'" />
+      <_LayoutFileSource Include="@(PriOutputs)" Condition="'%(PriOutputs.OutputGroup)' == 'CustomOutputGroupForPackaging' and '%(PriOutputs.ProjectName)' == '$(ProjectName)'" />
+      <_LayoutFile Include="@(_LayoutFileSource)" Exclude="@(_AppxLayoutAssetPackageFiles)" />
+      <_EmbedFile Include="@(PriOutputs)" Condition="'%(PriOutputs.OutputGroup)' == 'EmbedOutputGroupForPackaging' and '%(PriOutputs.ProjectName)' == '$(ProjectName)'"/>
+      <_EmbedFileCopy Include="@(_EmbedFile->'$(IntermediateOutputPath)$(AppxSubfolderWithFilesToBeEmbedded)\%(TargetPath)')" />
+
+      <!-- If we have the .xbf we don't need the .xaml file-->
+      <_LayoutFileXbfXaml Include="$([System.IO.Path]::ChangeExtension('%(_EmbedFile.Identity)','.xaml'))" Condition="'%(Extension)' == '.xbf'" />
+      <_LayoutFile Remove="@(_LayoutFileXbfXaml)" />
+    </ItemGroup>
+
+    <WinAppSdkGeneratePriConfigurationFiles
+          UnfilteredLayoutResfilesPath="$(_UnfilteredLayoutResfilesPath)"
+          FilteredLayoutResfilesPath="$(_FilteredLayoutResfilesPath)"
+          ExcludedLayoutResfilesPath="$(_ExcludedLayoutResfilesPath)"
+          ResourcesResfilesPath="$(_ResourcesResfilesPath)"
+          PriResfilesPath="$(_PriResfilesPath)"
+          EmbedFileResfilePath="$(_EmbedFileResfilePath)"
+          LayoutFiles="@(_LayoutFile)"
+          PRIResourceFiles="@(PRIResource)"
+          PriFiles="@(_PriFile)"
+          EmbedFiles="@(_EmbedFile)"
+          IntermediateExtension="$(AppxIntermediateExtension)"
+          UnprocessedResourceFiles_OtherLanguages="@(_UnprocessedReswFiles_OtherLanguages)"
+          VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="AdditionalResourceResFiles" ItemName="_AdditionalResourceResFiles" />
+    </WinAppSdkGeneratePriConfigurationFiles>
+
+    <WinAppSdkCreatePriConfigXmlForFullIndex
+        PriConfigXmlPath="$(_PriConfigXmlPath)"
+        LayoutResfilesPath="$(_FilteredLayoutResfilesPath)"
+        ResourcesResfilesPath="$(_ResourcesResfilesPath)"
+        PriResfilesPath="$(_PriResfilesPath)"
+        EmbedFileResfilePath="$(_EmbedFileResfilePath)"
+        PriInitialPath="$(AppxPriInitialPath)"
+        DefaultResourceLanguage="$(DefaultResourceLanguage)"
+        DefaultResourceQualifiers="$(AppxDefaultResourceQualifiers)"
+        IntermediateExtension="$(AppxIntermediateExtension)"
+        PriConfigXmlDefaultSnippetPath="$(AppxPriConfigXmlDefaultSnippetPath)"
+        TargetPlatformIdentifier="$(TargetPlatformIdentifier)"
+        TargetPlatformVersion="$(TargetPlatformResourceVersion)"
+        AdditionalResourceResFiles="@(_AdditionalResourceResFiles)"
+        VsTelemetrySession="$(VsTelemetrySession)" />
+
+    <MakeDir Directories="$(IntermediateOutputPath)$(AppxSubfolderWithFilesToBeEmbedded)" />
+
+    <Copy SourceFiles="@(_EmbedFile)" DestinationFiles="@(_EmbedFileCopy)" SkipUnchangedFiles='true' />
+
+    <Message Text="$(MSBuildProjectName) -> $(_PriConfigXmlPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_UnfilteredLayoutResfilesPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_FilteredLayoutResfilesPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_ExcludedLayoutResfilesPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_ResourcesResfilesPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_PriResfilesPath)" />
+    <Message Text="$(MSBuildProjectName) -> $(_AdditionalResourceResFiles)" />
+    <Message Condition="'$(_SupportEmbedFileResources)' == 'true'" Text="$(MSBuildProjectName) -> $(_EmbedFileResfilePath)" />
+  </Target>
+
+  <Target Name="_CalculateInputsForGenerateProjectPriFileCore">
+    <ItemGroup>
+      <_GenerateProjectPriFileCoreInput Include="$(_PriConfigXmlPath)" />
+      <_GenerateProjectPriFileCoreInput Include="$(_FilteredLayoutResfilesPath)" />
+      <_GenerateProjectPriFileCoreInput Include="$(_ResourcesResfilesPath)" />
+      <_GenerateProjectPriFileCoreInput Include="$(_PriResfilesPath)" />
+      <_GenerateProjectPriFileCoreInput Include="@(PRIResource)" />
+      <_GenerateProjectPriFileCoreInput Include="@(_PriFile)" />
+      <_GenerateProjectPriFileCoreInput Include="@(SourceAppxManifest)" />
+      <_GenerateProjectPriFileCoreInput Include="$(_EmbedFileResfilePath)" />
+      <_GenerateProjectPriFileCoreInput Include="@(_EmbedFile)" />
+      <_GenerateProjectPriFileCoreInput Include="@(_AdditionalResourceResFiles)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_GenerateProjectPriFileCore" DependsOnTargets="_CalculateInputsForGenerateProjectPriFileCore" Inputs="$(MSBuildAllProjects); @(_GenerateProjectPriFileCoreInput)" Outputs="$(ProjectPriFullPath)">
+    <MakeDir Condition="'$(InsertReverseMap)' == 'true'" Directories="$(_ReverseMapProjectPriDirectory)" />
+
+    <WinAppSdkGenerateProjectPriFile MakePriExeFullPath="$(MakePriExeFullPath)"
+                            MakePriExtensionPath="$(OutOfProcessMakePriExtensionPath)"
+                            PriConfigXmlPath="$(_PriConfigXmlPath)"
+                            IndexFilesForQualifiersCollection="$(_FilteredLayoutResfilesPath);$(_ResourcesResfilesPath)"
+                            ProjectPriIndexName="$(ProjectPriIndexName)"
+                            InsertReverseMap="$(InsertReverseMap)"
+                            ProjectDirectory="$(ProjectDir)"
+                            OutputFileName="$(ProjectPriFullPath)"
+                            QualifiersPath="$(_QualifiersPath)"
+                            IntermediateExtension="$(AppxIntermediateExtension)"
+                            AppxBundleAutoResourcePackageQualifiers="$(AppxBundleAutoResourcePackageQualifiers)"
+                            MultipleQualifiersPerDimensionFoundPath="$(_MultipleQualifiersPerDimensionFoundPath)"
+                            AdditionalMakepriExeParameters="$(AppxGenerateProjectPriFileAdditionalMakepriExeParameters)"
+                            VsTelemetrySession="$(VsTelemetrySession)" />
+
+    <Message Text="$(MSBuildProjectName) -> $(ProjectPriFileName)" />
+  </Target>
+
+  <Target Name="_AddFileReadsAndFileWritesForProjectPri">
+    <ItemGroup>
+      <FileReads Include="@(_GenerateProjectPriFileCoreInput)" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <FileWrites Include="$(_PriConfigXmlPath)" />
+      <FileWrites Include="$(_PriConfigXmlPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_UnfilteredLayoutResfilesPath)" />
+      <FileWrites Include="$(_UnfilteredLayoutResfilesPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_FilteredLayoutResfilesPath)" />
+      <FileWrites Include="$(_FilteredLayoutResfilesPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_ExcludedLayoutResfilesPath)" />
+      <FileWrites Include="$(_ExcludedLayoutResfilesPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_ResourcesResfilesPath)" />
+      <FileWrites Include="$(_ResourcesResfilesPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_PriResfilesPath)" />
+      <FileWrites Include="$(_PriResfilesPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(ProjectPriFullPath)" />
+      <FileWrites Include="$(_QualifiersPath)" />
+      <FileWrites Include="$(_QualifiersPath)$(AppxIntermediateExtension)" />
+      <FileWrites Include="$(_MultipleQualifiersPerDimensionFoundPath)" />
+      <FileWrites Include="@(_AdditionalResourceResFiles)" />
+      <FileWrites Include="@(_AdditionalResourceResFiles->'%(Identity)$(AppxIntermediateExtension)')" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="_CalculateUseResourceIndexerApi">
+
+    <PropertyGroup Condition="'$(AppxUseResourceIndexerApi)' == ''">
+      <OsVersion>$(registry:HKEY_LOCAL_MACHINE\Software\Microsoft\Windows NT\CurrentVersion@CurrentVersion)</OsVersion>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxUseResourceIndexerApi)' == ''">
+      <AppxUseResourceIndexerApi Condition="'$(OsVersion)' &lt; '6.3'">false</AppxUseResourceIndexerApi>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(AppxUseResourceIndexerApi)' == ''">
+      <AppxUseResourceIndexerApi>true</AppxUseResourceIndexerApi>
+    </PropertyGroup>
+
+    <Message Importance="low" Text="AppxUseResourceIndexerApi=$(AppxUseResourceIndexerApi)" />
+  </Target>
+
+  <Target Name="_ExpandProjectPriFile" Condition="'$(AppxUseResourceIndexerApi)' == 'false'">
+    <WinAppSdkExpandPriContent Inputs="@(ProjectPriFile)"
+                      MakePriExeFullPath="$(MakePriExeFullPath)"
+                      MakePriExtensionPath="$(OutOfProcessMakePriExtensionPath)"
+                      IntermediateDirectory="$(IntermediateOutputPath)"
+                      AdditionalMakepriExeParameters="$(AppxExpandPriContentAdditionalMakepriExeParameters)"
+                      VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Expanded" ItemName="IndexedPayloadFiles" />
+      <Output TaskParameter="IntermediateFileWrites" ItemName="FileWrites" />
+    </WinAppSdkExpandPriContent>
+  </Target>
+
+  <Target Name="_GetMakePriToolPath">
+    <WinAppSdkGetSdkFileFullPath FileName="MakePri.exe"
+                        TargetPlatformSdkRootOverride="$(TargetPlatformSdkRootOverride)"
+                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                        VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="ActualFullFilePath" PropertyName="MakePriExeFullPath" />
+      <Output TaskParameter="ActualFileArchitecture" PropertyName="MakePriArchitecture" />
+    </WinAppSdkGetSdkFileFullPath>
+  </Target>
+
+  <Target Name="_GetMrmSupportLibraryPath">
+    <WinAppSdkGetSdkFileFullPath FileName="MrmSupport.dll"
+                        TargetPlatformSdkRootOverride="$(TargetPlatformSdkRootOverride)"
+                        TargetPlatformVersion="$(TargetPlatformVersion)"
+                        VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="ActualFullFilePath" PropertyName="MrmSupportLibraryPath" />
+    </WinAppSdkGetSdkFileFullPath>
+
+    <Message Importance="low" Text="MrmSupportLibraryPath: $(MrmSupportLibraryPath)" />
+  </Target>
+
+  <Target Name="_CalculateXbfSupport">
+    <PropertyGroup>
+      <_SupportXbfAsEmbedFileResources Condition="'$(_SupportEmbedFileResources)' == 'true' and '$(DisableEmbeddedXbf)' == 'false'">true</_SupportXbfAsEmbedFileResources>
+      <_SupportXbfAsEmbedFileResources Condition="'$(DisableEmbeddedXbf)' == 'true'">false</_SupportXbfAsEmbedFileResources>
+      <_SupportXbfAsEmbedFileResources Condition="'$(_SupportXbfAsEmbedFileResources)' == '' AND '$(_SupportEmbedFileResources)' == 'true'">true</_SupportXbfAsEmbedFileResources>
+    </PropertyGroup>
+  </Target>
+
+  <!--
+    For unpackaged Win32 apps, we want the GetPriOutputs target to run, so that
+    the UpdateTargetPathForPriItems can run.
+  -->
+
+  <PropertyGroup>
+    <GetCopyToOutputDirectoryItemsDependsOn>
+      GetPriOutputs;
+      $(GetCopyToOutputDirectoryItemsDependsOn);
+    </GetCopyToOutputDirectoryItemsDependsOn>
+
+    <!--
+      The PRI gen targets unforunately have innate knowledge of xbf. This target ensures that WinUI has added their xbf files
+      the copy local path so that they can be fed into PRI targets later on.
+    -->
+    <GetCopyToOutputDirectoryItemsDependsOn Condition="'$(DefaultXamlRuntime)'=='WinUI'">
+      AddProcessedXamlFilesToCopyLocal;
+      $(GetCopyToOutputDirectoryItemsDependsOn);
+    </GetCopyToOutputDirectoryItemsDependsOn>
+
+  </PropertyGroup>
+
+    <PropertyGroup>
+    <GetPriOutputsDependsOn>
+      $(GetPriOutputsDependsOn);
+      AssignProjectConfiguration;
+      _CalculateXbfSupport;
+    </GetPriOutputsDependsOn>
+  </PropertyGroup>
+
+  <!--
+    GetPriOutputs gathers all outputs from the current project, as well as project references, for
+    files that could need to be indexed into the .pri generation process. It does this through
+    invoking special well-known targets, which populate items into OutputGroups.
+
+    Note that this *does not* grab all possible outputs - GetPackagingOutputs does that. It also
+    doesn't copy files, it just recursively invokes GetPriOutputs to populate a list of files.
+  -->
+  <Target Name="GetPriOutputs"
+          Condition="'$(AppxGeneratePriEnabled)'=='true'"
+          Returns="@(PriOutputs);@(ProjectPriFile)"
+          DependsOnTargets="$(GetPriOutputsDependsOn)">
+    <PropertyGroup>
+      <IncludePriFilesOutputGroup Condition="'$(IncludePriFilesOutputGroup)' == ''">true</IncludePriFilesOutputGroup>
+      <IncludeProjectPriFile Condition="'$(IncludeProjectPriFile)' == ''">true</IncludeProjectPriFile>
+      <IncludeCopyLocalFilesOutputGroup Condition="'$(IncludeCopyLocalFilesOutputGroup)' == ''">true</IncludeCopyLocalFilesOutputGroup>
+      <IncludeContentFilesProjectOutputGroup Condition="'$(IncludeContentFilesProjectOutputGroup)' == ''">true</IncludeContentFilesProjectOutputGroup>
+      <IncludeCustomOutputGroupForPackaging Condition="'$(IncludeCustomOutputGroupForPackaging)' == ''">false</IncludeCustomOutputGroupForPackaging>
+    </PropertyGroup>
+    <CallTarget Targets="PriFilesOutputGroup" Condition="'$(IncludePriFilesOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_PriFilesOutputGroupOutput"/>
+    </CallTarget>
+
+    <CallTarget Targets="CopyLocalFilesOutputGroup" Condition="'$(IncludeCopyLocalFilesOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_CopyLocalFilesOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PriOutputsUnexpanded Include="@(_CopyLocalFilesOutputGroupOutput)" Condition="'%(Extension)'=='.pri'">
+        <OutputGroup>CopyLocalFilesOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PriOutputsUnexpanded>
+    </ItemGroup>
+
+    <ItemGroup>
+      <_PriOutputsUnexpanded Include="@(_PriFilesOutputGroupOutput)">
+        <OutputGroup>PriFilesOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+      </_PriOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="ContentFilesProjectOutputGroup" Condition="'$(IncludeContentFilesProjectOutputGroup)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_ContentFilesProjectOutputGroupOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PriOutputsUnexpanded Include="@(_ContentFilesProjectOutputGroupOutput)">
+        <OutputGroup>ContentFilesProjectOutputGroup</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath Condition="'$(AppxPackage)' != 'true' and '$(AppxPriInitialPath)' != ''">$(AppxPriInitialPath)\%(_ContentFilesProjectOutputGroupOutput.TargetPath)</TargetPath>
+      </_PriOutputsUnexpanded>
+    </ItemGroup>
+
+    <CallTarget Targets="CustomOutputGroupForPackaging" Condition="'$(IncludeCustomOutputGroupForPackaging)' == 'true'">
+      <Output TaskParameter="TargetOutputs" ItemName="_CustomOutputGroupForPackagingOutput"/>
+    </CallTarget>
+
+    <ItemGroup>
+      <_PriOutputsUnexpanded Include="@(_CustomOutputGroupForPackagingOutput)" Condition="'%(Extension)' != '.xbf'">
+        <OutputGroup>CustomOutputGroupForPackaging</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath Condition="'$(AppxPackage)' != 'true' and '$(AppxPriInitialPath)' != ''">$(AppxPriInitialPath)\%(_CustomOutputGroupForPackagingOutput.TargetPath)</TargetPath>
+      </_PriOutputsUnexpanded>
+      <_PriOutputsUnexpanded Include="@(_CustomOutputGroupForPackagingOutput)" Condition="'%(Extension)' == '.xbf' AND '$(_SupportXbfAsEmbedFileResources)' != 'true'">
+        <OutputGroup>CustomOutputGroupForPackaging</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath Condition="'$(AppxPackage)' != 'true' and '$(AppxPriInitialPath)' != ''">$(AppxPriInitialPath)\%(_CustomOutputGroupForPackagingOutput.TargetPath)</TargetPath>
+      </_PriOutputsUnexpanded>
+      <_PriOutputsUnexpanded Include="@(_CustomOutputGroupForPackagingOutput)" Condition="'%(Extension)' == '.xbf' AND '$(_SupportXbfAsEmbedFileResources)' == 'true'">
+        <OutputGroup>EmbedOutputGroupForPackaging</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath Condition="'$(AppxPackage)' != 'true' and '$(AppxPriInitialPath)' != ''">$(AppxPriInitialPath)\%(_CustomOutputGroupForPackagingOutput.TargetPath)</TargetPath>
+      </_PriOutputsUnexpanded>
+    </ItemGroup>
+
+    <WinAppSdkExpandPayloadDirectories Inputs="@(_PriOutputsUnexpanded)" VsTelemetrySession="$(VsTelemetrySession)">
+      <Output TaskParameter="Expanded" ItemName="_PriOutputsExpanded" />
+    </WinAppSdkExpandPayloadDirectories>
+
+    <ItemGroup>
+      <ProjectPriFile Include="$(ProjectPriFullPath)" Condition="'$(IncludeProjectPriFile)' == 'true'">
+        <OutputGroup>ProjectPriFile</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath>$(ProjectPriFileName)</TargetPath>
+      </ProjectPriFile>
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(BuildAppxUploadPackageForUap)' == 'true'">
+      <ProjectPriUploadFile Include="$(ProjectPriUploadFullPath)" Condition="'$(IncludeProjectPriFile)' == 'true'">
+        <OutputGroup>ProjectPriUploadFile</OutputGroup>
+        <ProjectName>$(ProjectName)</ProjectName>
+        <TargetPath>$(ProjectPriFileName)</TargetPath>
+      </ProjectPriUploadFile>
+    </ItemGroup>
+
+    <PropertyGroup>
+      <_ContinueOnError Condition="'$(BuildingProject)' == 'true'">false</_ContinueOnError>
+      <_ContinueOnError Condition="'$(BuildingProject)' != 'true'">true</_ContinueOnError>
+    </PropertyGroup>
+
+    <MSBuild
+      Projects="@(ProjectReferenceWithConfiguration)"
+      Targets="GetPriOutputs"
+      SkipNonexistentTargets="true"
+      BuildInParallel="$(BuildInParallel)"
+      Properties="%(ProjectReferenceWithConfiguration.SetConfiguration); %(ProjectReferenceWithConfiguration.SetPlatform)"
+      Condition="'@(ProjectReferenceWithConfiguration)' != ''
+                 and '%(ProjectReferenceWithConfiguration.BuildReference)' == 'true'
+                 and '%(ProjectReferenceWithConfiguration.ReferenceOutputAssembly)' == 'true'"
+      ContinueOnError="$(_ContinueOnError)">
+      <Output TaskParameter="TargetOutputs" ItemName="_PriOutputsFromOtherProjects"/>
+    </MSBuild>
+
+    <ItemGroup>
+      <PriOutputs Include="@(_PriOutputsExpanded)" />
+      <PriOutputs Include="@(_PriOutputsFromOtherProjects)" />
+    </ItemGroup>
+
+    <!-- Remove all .xaml files that correlate with a .xbf file -->
+    <ItemGroup>
+      <_PriOutputsXbfXaml Include="$([System.IO.Path]::ChangeExtension('%(PriOutputs.Identity)','.xaml'))" Condition="'%(Extension)' == '.xbf'" />
+      <PriOutputs Remove="@(_PriOutputsXbfXaml)" />
+    </ItemGroup>
+
+    <Message Text="$(ProjectName) : %(PriOutputs.ProjectName).%(PriOutputs.OutputGroup) : %(PriOutputs.Identity) -> %(PriOutputs.TargetPath)" />
+  </Target>
+
+  <!--
+    For unpackaged Win32 apps, we want the GetPriOutputs target to run, so that
+    the UpdateTargetPathForPriItems can run
+  -->
+  <Target Name="UpdateTargetPathForPriItems"
+          AfterTargets="GetCopyToOutputDirectoryItems"
+          Returns="@(_SourceItemsToCopyToOutputDirectory)">
+    <ItemGroup>
+      <_PriInputs Include="@(PriOutputs)"/>
+      <!--
+        Remove any PRI resources that aren't a part of this project. Resources that are index as part of the PRI.
+        Will be copied into the subfolder based on their target path.
+      -->
+      <_SourceItemsToCopyToOutputDirectoryRemoved Include="@(PriOutputs)"
+                                              Condition="'%(PriOutputs.ProjectName)'!='$(ProjectName)'"/>
+      <_SourceItemsToCopyToOutputDirectory Remove="@(_SourceItemsToCopyToOutputDirectoryRemoved)"/>
+
+      <!--
+        Only add back the ContentFilesProjectOutputGroup, because those will need to be deployed with the application.
+        We skip the EmbedOutputGroupForPackaging because those files are embedded in the pri, and don't need to be
+        copied.
+      -->
+      <_SourceItemsToCopyToOutputDirectory Include="@(_SourceItemsToCopyToOutputDirectoryRemoved)"
+                                      Condition="'%(_SourceItemsToCopyToOutputDirectoryRemoved.OutputGroup)'=='ContentFilesProjectOutputGroup'"
+                                      KeepMetadata="false">
+        <TargetPath>%(TargetPath)</TargetPath>
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </_SourceItemsToCopyToOutputDirectory>
+    </ItemGroup>
+  </Target>
+
+  <!--
+    Generate error if there are duplicate pri items.  The task comes from the .NET SDK, and this
+    target follows the pattern in the CheckForDuplicateItems task, where the .NET SDK checks for
+    duplicate items for the item types it knows about.
+  -->
+  <Target Name="CheckForDuplicatePriItems"
+          BeforeTargets="_CheckForInvalidConfigurationAndPlatform;CoreCompile"
+          DependsOnTargets="CheckForDuplicateItems"
+          Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
+
+    <CheckForDuplicateItems
+      Items="@(PRIResource)"
+      ItemName="PRIResource"
+      DefaultItemsEnabled="$(EnableDefaultItems)"
+      DefaultItemsOfThisTypeEnabled="$(EnableDefaultPriItems)"
+      PropertyNameToDisableDefaultItems="EnableDefaultPriItems"
+      MoreInformationLink="$(DefaultItemsMoreInformationLink)"
+      ContinueOnError="$(ContinueOnError)">
+      <Output TaskParameter="DeduplicatedItems" ItemName="DeduplicatedPriItems" />
+    </CheckForDuplicateItems>
+
+    <ItemGroup Condition="'$(DesignTimeBuild)' == 'true' And '@(DeduplicatedPriItems)' != ''">
+      <PRIResource Remove="@(PRIResource)" />
+      <PRIResource Include="@(DeduplicatedPriItems)" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    The .NET SDK doesn't publish the PRI file. The reason is PRI files were previously UWP
+    specific. Windows App SDK added them to other app types, including .NET.
+  -->
+  <Target Name="AddProjectPriToResolvedFileToPublish"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="$(GenerateProjectPriFile)">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="$(ProjectPriFullPath)"
+                             Condition="'$(CopyBuildOutputToPublishDirectory)' == 'true'">
+        <RelativePath>$(ProjectPriFileName)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>

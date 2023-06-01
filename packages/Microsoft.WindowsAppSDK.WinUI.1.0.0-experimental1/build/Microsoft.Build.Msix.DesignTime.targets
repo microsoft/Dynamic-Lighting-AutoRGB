@@ -1,0 +1,22 @@
+<Project ToolsVersion="14.0">
+  <PropertyGroup>
+    <MsixProjRulesDir>$(MSBuildThisFileDirectory)Rules\</MsixProjRulesDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectCapability Include="Msix"/>
+    <ProjectCapability Include="WindowsAppContainer" />
+    <ProjectCapability Include="AppDesigner" />
+    <ProjectCapability Include="ImageSet"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PropertyPageSchema Include="$(MsixProjRulesDir)$(LangID)\ProjectItemsSchema.xaml"/>
+    <PropertyPageSchema Include="$(MsixProjRulesDir)$(LangID)\general.xaml">
+      <Context>Project</Context>
+    </PropertyPageSchema>
+    <PropertyPageSchema Include="$(MsixProjRulesDir)$(LangID)\appxmanifest.xaml">
+      <Context>File;BrowseObject</Context>
+    </PropertyPageSchema>
+  </ItemGroup>
+</Project>

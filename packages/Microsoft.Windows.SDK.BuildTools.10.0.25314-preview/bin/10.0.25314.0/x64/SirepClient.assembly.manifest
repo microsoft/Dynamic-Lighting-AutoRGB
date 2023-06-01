@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+
+<assembly manifestVersion="1.0"
+          xmlns="urn:schemas-microsoft-com:asm.v1"
+          >
+
+  <assemblyIdentity name="SirepClient.assembly" version="1.0.0.0" type="win32" processorArchitecture="x86" />
+
+  <file name = "SirepClient.dll">
+
+    <typelib tlbid="{7EFECE2D-00AD-4067-B311-0EA43732E39E}" version="8.0" helpdir="" />
+
+    <!-- coclass -->
+    <comClass clsid="{DD38192B-D69A-4B02-893A-534426FC2768}" threadingModel = "Free" />
+
+  </file>
+
+  <comInterfaceExternalProxyStub name="ILaunchWithOutputCB"
+                                 iid="{1E747562-7E19-4245-87B7-7E6EA5FC9F0B}"
+                                 proxyStubClsid32="{00020424-0000-0000-C000-000000000046}"
+                                 baseInterface="{00020400-0000-0000-C000-000000000046}"
+                                 tlbid = "{7EFECE2D-00AD-4067-B311-0EA43732E39E}"
+                                 />
+
+  <comInterfaceExternalProxyStub name="ISirepClient"
+                                 iid="{1EB18FBD-5C48-441A-A4CB-8401B7A7F601}"
+                                 proxyStubClsid32="{00020424-0000-0000-C000-000000000046}"
+                                 baseInterface="{00020400-0000-0000-C000-000000000046}"
+                                 tlbid = "{7EFECE2D-00AD-4067-B311-0EA43732E39E}"
+                                 />
+
+</assembly>

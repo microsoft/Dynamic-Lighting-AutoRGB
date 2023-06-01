@@ -1,0 +1,30 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Target Name="ReferenceCopyXamlToolingLibs"
+        Condition="('$(WindowsAppSDKWinUI)'=='true' or '$(MSBuildProjectExtension)'=='.wapproj') and
+            ('$(Platform)'=='Win32' or '$(Platform)'=='x86' or '$(Platform)'=='x64' or '$(Platform)'=='arm64') and
+            '$(MSBuildVersion)'&lt;'16.10' and '$(WindowsAppSDKCopyXamlToolingLibs)'!='false' and '$(OutputType)'!='Library'"
+        AfterTargets="ResolveReferences">
+    <PropertyGroup>
+      <NativePlatform Condition="'$(Platform)' == 'Win32'">x86</NativePlatform>
+      <NativePlatform Condition="'$(Platform)' != 'Win32'">$(Platform)</NativePlatform>
+      <MicrosoftWindowsAppSDKAppxContent>$([MSBuild]::NormalizeDirectory('$(ProjectDir)','$(OutDir)'))AppxContent</MicrosoftWindowsAppSDKAppxContent>
+    </PropertyGroup>
+    <ItemGroup>
+      <MicrosoftWindowsAppSDKAppx Include="$(MSBuildThisFileDirectory)..\tools\MSIX\win10-$(NativePlatform)\Microsoft.WindowsAppRuntime.*.msix"/>
+    </ItemGroup>
+    <Unzip
+        SourceFiles="@(MicrosoftWindowsAppSDKAppx)"
+        DestinationFolder="$(MicrosoftWindowsAppSDKAppxContent)"
+        SkipUnchangedFiles="true"
+        OverwriteReadOnlyFiles="true" />
+    <ItemGroup>
+      <ReferenceCopyLocalPaths Include="$(MicrosoftWindowsAppSDKAppxContent)\Microsoft.Internal.FrameworkUdk.dll" />
+      <ReferenceCopyLocalPaths Include="$(MicrosoftWindowsAppSDKAppxContent)\Microsoft.ui.xaml.dll" />
+    </ItemGroup>
+  </Target>
+
+</Project>

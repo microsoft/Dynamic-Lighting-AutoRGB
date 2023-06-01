@@ -1,0 +1,17 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!--WinUI packaging and build behavior is determined by:
+    ProjectReunionWinUI:
+        If true, this is the ProjectReunion deployment of WinUI, versus the internal legacy deployment for testing only.
+        This property is defined by deployment-specific props imports, and should not be overridden by clients.
+    ProjectReunionFrameworkPackage:
+        If not explicitly set to false by a client, WinUI binaries are loaded at runtime from the Reunion Framework Package. 
+        This property is only applicable when $(ProjectReunionWinUI) is true, and is ignored by WinUI targets.
+        This property controls target file behavior, and so should only be explicitly set by clients.
+    -->
+    <ProjectReunionWinUI>true</ProjectReunionWinUI>
+  </PropertyGroup>
+</Project>

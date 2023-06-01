@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<WindowsAppSDK>
+    <Release>
+        <Major>1</Major>
+        <Minor>0</Minor>
+        <Patch>0</Patch>
+        <MajorMinor>
+            <UInt32>65536</UInt32>
+            <HexUInt32>00010000</HexUInt32>
+        </MajorMinor>
+
+        <Channel>preview</Channel>
+        <Tag>preview1</Tag>
+        <ShortTag>p1</ShortTag>
+    </Version>
+
+    <Runtime>
+        <Publisher>CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US</Publisher>
+        <PublisherId>8wekyb3d8bbwe</Publisher>
+        <Version>
+            <DotQuadNumber>0.258.2116.0</DotQuadNumber>
+            <UInt16>1108240236544</UInt16>
+            <HexUInt16>0x0000010208440000</HexUInt16>
+            <String>0.258.2116.0</String>
+        </Version>
+    </Runtime>
+</WindowsAppSDK>

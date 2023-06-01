@@ -1,0 +1,17 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <!--WinUI packaging and build behavior is determined by:
+    WindowsAppSDKWinUI:
+        If true, this is the WindowsAppSDK deployment of WinUI, versus the internal legacy deployment for testing only.
+        This property is defined by deployment-specific props imports, and should not be overridden by clients.
+    WindowsAppSDKFrameworkPackage:
+        If not explicitly set to false by a client, WinUI binaries are loaded at runtime from the WindowsAppSDK Framework Package. 
+        This property is only applicable when $(WindowsAppSDKWinUI) is true, and is ignored by WinUI targets.
+        This property controls target file behavior, and so should only be explicitly set by clients.
+    -->
+    <WindowsAppSDKWinUI>true</WindowsAppSDKWinUI>
+  </PropertyGroup>
+</Project>

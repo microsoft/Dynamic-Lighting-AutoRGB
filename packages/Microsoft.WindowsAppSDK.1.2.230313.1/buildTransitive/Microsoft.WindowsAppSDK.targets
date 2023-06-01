@@ -1,0 +1,70 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <!--Imports for each component targets-->
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.DWrite.targets" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.DWrite.targets')" />
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.Foundation.targets" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.Foundation.targets')" />
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.WinUI.targets" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.WinUI.targets')" />
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.InteractiveExperiences.targets" Condition="Exists('$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.InteractiveExperiences.targets')" />
+
+    <!--Import after all other props to ensure WindowsAppSDKSelfContained is set (required for SelfContained projects)-->
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.SelfContained.targets" Condition="'$(WindowsAppSDKSelfContained)'=='true'"/>
+
+  <!--Define compile-time constants-->
+  <!--TODO Move to windowsappsdk\build\NuSpecs\WindowsAppSDK-Nuget-Native.Bootstrap.targets -->
+  <Target Name="WindowsAppSDKBootstrapCompileTimeConstants"
+          BeforeTargets="ClCompile"
+          Condition="'$(WindowsAppSdkBootstrapInitialize)'=='true'">
+    <ItemGroup>
+      <ClCompile>
+        <PreprocessorDefinitions>%(PreprocessorDefinitions);MICROSOFT_WINDOWSAPPSDK_BOOTSTRAP_AUTO_INITIALIZE=1</PreprocessorDefinitions>
+      </ClCompile>
+    </ItemGroup>
+  </Target>
+  <!--TODO Move to windowsappsdk\build\NuSpecs\Microsoft.WindowsAppSDK.Bootstrap.CS.targets -->
+  <PropertyGroup Condition="'$(WindowsAppSdkBootstrapInitialize)'=='true'">
+    <DefineConstants>$(DefineConstants);MICROSOFT_WINDOWSAPPSDK_BOOTSTRAP_AUTO_INITIALIZE</DefineConstants>
+  </PropertyGroup>
+
+    <!--Import after all other props to ensure WindowsAppSDKFrameworkPackageReference is set (required for C++ projects)-->
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.WindowsAppSDK.AppXReference.props" Condition="'$(WindowsAppSDKFrameworkPackageReference)'!='false'"/>
+    <Import Project="$(MSBuildThisFileDirectory)Microsoft.Xaml.Tooling.targets" />
+
+    <PropertyGroup>
+        <ResolveReferencesDependsOn Condition="'$(WindowsAppSDKVerifyWinrtRuntimeVersion)'!='false' and '$(MSBuildProjectExtension)'=='.csproj'">
+            $(ResolveReferencesDependsOn);WindowsAppSDKVerifyWinrtRuntimeVersion
+        </ResolveReferencesDependsOn>
+    </PropertyGroup>
+
+    <Target Name="RemoveVCLibsFrameworkPackageDependencies" BeforeTargets="_ConvertItems" AfterTargets="_ResolveVCLibDependencies" Condition="'$(MSBuildProjectExtension)'=='.wapproj'">
+        <ItemGroup>
+            <!-- Remove VCLibs references made by DesktopBridge _ResolveVCLibDependencies -->
+            <FrameworkSdkPackage Remove="@(FrameworkPackageDependencies)"/>
+            <!-- And prevent additional VCLibs references made by DesktopBridge _ConvertItems -->
+            <InstalledSDKLocations Remove="@(InstalledSDKLocations)" />
+        </ItemGroup>
+    </Target>
+
+    <Target Name="WindowsAppSDKVerifyWinrtRuntimeVersion" DependsOnTargets="ResolveAssemblyReferences">
+        <ItemGroup>
+            <_WinrtRuntimeReferencePath Include="@(ReferencePath)" Condition="'%(Filename)%(Extension)'=='WinRT.Runtime.dll'" />
+            <_WinrtRuntimeReferencePathWithAssemblyVersion Include="@(_WinrtRuntimeReferencePath->HasMetadata('AssemblyVersion'))" />
+            <!-- FrameworkReference packages have both NuGetPackageVersion and AssemblyVersion, but NuGetPackageVersion is in the SDK version format. -->
+            <_WinrtRuntimeReferencePathWithNuGetPackageVersion Include="@(_WinrtRuntimeReferencePath->HasMetadata('NuGetPackageVersion'))" Exclude="@(_WinrtRuntimeReferencePathWithAssemblyVersion)" />
+            <_WinrtRuntimeCompatibleFromNuGet Include="@(_WinrtRuntimeReferencePathWithNuGetPackageVersion)" Condition="'@(_WinrtRuntimeReferencePathWithNuGetPackageVersion)'!='' and $([MSBuild]::VersionGreaterThanOrEquals(%(NuGetPackageVersion), '2.0'))" />
+            <_WinrtRuntimeCompatibleFromSDK Include="@(_WinrtRuntimeReferencePathWithAssemblyVersion)" Condition="'@(_WinrtRuntimeReferencePathWithAssemblyVersion)'!='' and $([MSBuild]::VersionGreaterThanOrEquals(%(AssemblyVersion), '2.0'))" />
+        </ItemGroup>
+        <Error Condition="'@(_WinrtRuntimeReferencePath)'!='' and '@(_WinrtRuntimeCompatibleFromNuGet)@(_WinrtRuntimeCompatibleFromSDK)'==''"
+            Text="This version of WindowsAppSDK requires .NET 6+ and WinRT.Runtime.dll version 2.0 or greater.
+    Please update to .NET SDK 6.0.109, 6.0.304 or 6.0.401 (or later).
+    Or add a temporary Microsoft.Windows.SDK.NET.Ref reference of version 10.0.*.27 or later.
+    For example,
+        &lt;PropertyGroup&gt;
+            &lt;WindowsSdkPackageVersion&gt;10.0.&lt;Target Windows SDK Build Number&gt;.27&lt;/WindowsSdkPackageVersion&gt;
+        &lt;/PropertyGroup&gt;
+" />
+    </Target>
+
+</Project>

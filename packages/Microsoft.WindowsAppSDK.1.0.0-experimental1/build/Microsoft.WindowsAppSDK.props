@@ -1,0 +1,9 @@
+<!--
+  Copyright (c) Microsoft Corporation. Licensed under the MIT License
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <Import Project="$(MSBuildThisFileDirectory)\Microsoft.WindowsAppSDK.Package.props" />
+  <Import Project="$(MSBuildThisFileDirectory)\Microsoft.WindowsAppSDK.AppXReference.props" Condition="'$(WindowsAppSDKFrameworkPackage)'=='true'"/>
+
+</Project>
