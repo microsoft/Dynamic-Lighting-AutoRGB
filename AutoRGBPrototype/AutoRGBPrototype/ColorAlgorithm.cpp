@@ -35,7 +35,7 @@ Vector3 ColorAlgorithm::CalculateAverageColor(uint32_t* shaderOutput)
             uint32_t numPixelsInBin = shaderOutput[offset + bin];
             currHistogram[bin] = numPixelsInBin;
 
-            m_avgBins[histogram] += bin * (numPixelsInBin / m_numPixels);
+            m_avgBins[histogram] += bin * (numPixelsInBin / (float)m_numPixels);
             numPixelsPerHistogram[histogram] += numPixelsInBin;
         }
     }
