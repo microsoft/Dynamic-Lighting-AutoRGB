@@ -65,10 +65,10 @@ Vector3 ColorAlgorithm::CalculateColorFromTopBins()
     uint32_t numBinsUsed = 0;
 
     // Percentage of pixels required before we stop adding buckets
-    float percentPixelsRequired = 0.7f;
+    float percentPixelsRequired = 0.3f;
 
     // Prevent one color overly dominating the rest
-    float binDisplacementValue = 0.025f;
+    float binDisplacementValue = 0.01f;
 
     // Iterate through the top X bins in each histogram until we have met the required pixel coverage
     for (int bin = NUM_BINS_PER_HISTOGRAM - 1; bin >= 0; bin--)
