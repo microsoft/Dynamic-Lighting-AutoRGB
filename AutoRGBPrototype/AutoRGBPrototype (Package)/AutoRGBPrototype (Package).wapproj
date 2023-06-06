@@ -63,7 +63,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Windows.CppWinRT" Version="2.0.230225.1" />
+    <PackageReference Include="Microsoft.Windows.CppWinRT" Version="2.0.230524.3" />
+    <PackageReference Include="Microsoft.Windows.ImplementationLibrary" Version="1.0.230411.1" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="[1.0.0-experimental1]">
       <IncludeAssets>build</IncludeAssets>
     </PackageReference>
